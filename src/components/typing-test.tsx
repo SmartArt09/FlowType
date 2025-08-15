@@ -135,6 +135,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         }, 1000);
 
         wpmIntervalRef.current = setInterval(() => {
+          if (!startTime) return;
           let correctChars = 0;
           userInput.split('').forEach((char, index) => {
               if (char === textToType[index]) {
@@ -143,6 +144,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
           });
           const elapsedMillis = Date.now() - startTime;
           const elapsedSeconds = elapsedMillis / 1000;
+
+          if (elapsedSeconds < 2) {
+            // Don't calculate WPM until at least 2 seconds have passed to avoid spikes
+            return;
+          }
+
           const currentWpm = (correctChars / 5) / (elapsedSeconds / 60);
           setStats(prev => ({ ...prev, wpm: currentWpm }));
         }, 200);
@@ -162,7 +169,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     const animationFrameId = requestAnimationFrame(() => {
       setDisplayedWpm(prev => {
         const diff = stats.wpm - prev;
-        // Adjust the smoothing factor (e.g., 0.1) for faster/slower transitions
         const newWpm = prev + diff * 0.1; 
         return newWpm;
       });
@@ -195,7 +201,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
           mistakes: mistakeCount
         }));
 
-        if (typedChars > 0 && typedChars === textToType.length) {
+        if (typedChars > 0 && correctChars === textToType.length) {
           endTest();
         }
     }
@@ -326,3 +332,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
