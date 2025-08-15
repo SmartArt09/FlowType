@@ -35,18 +35,18 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [duration, setDuration] = useState(60);
   const [textType, setTextType] = useState<TextType>('commonWords');
   const [timer, setTimer] = useState(duration);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, mistakes: 0 });
   const [displayedWpm, setDisplayedWpm] = useState(0);
-  const [wpm, setWpm] = useState(0);
-  const [accuracy, setAccuracy] = useState(0);
+
   const [loadingNewText, setLoadingNewText] = useState(false);
-  const [startTime, setStartTime] = useState<number | null>(null);
-  const [mistakeCount, setMistakeCount] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
 
   const { toast } = useToast();
 
@@ -54,16 +54,20 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setTestState('waiting');
     setUserInput('');
     setTimer(duration);
-    setWpm(0);
     setDisplayedWpm(0);
-    setAccuracy(0);
-    setStartTime(null);
     setMistakeCount(0);
+    setStats({ wpm: 0, accuracy: 0, mistakes: 0 });
+
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
-    if(newText) setTextToType(newText)
+    if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+    
+    startTimeRef.current = null;
+    
+    if (newText) setTextToType(newText);
+    
     inputRef.current?.focus();
   }, [duration]);
+  
 
   const fetchNewText = useCallback(async (type: TextType) => {
     setLoadingNewText(true);
@@ -76,10 +80,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
         variant: 'destructive',
       });
       setTextToType('The quick brown fox jumps over the lazy dog.'); // fallback text
+      resetTest('The quick brown fox jumps over the lazy dog.');
     } else {
       setTextToType(text);
+      resetTest(text);
     }
-    resetTest(text);
     setLoadingNewText(false);
   }, [resetTest, toast]);
 
@@ -94,45 +99,49 @@ export function TypingTest({ initialText }: { initialText: string }) {
     resetTest();
   }, [duration, resetTest]);
 
+  const calculateStats = useCallback(() => {
+    if (!startTimeRef.current || testState !== 'running') return;
   
-  const endTest = useCallback(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
-    setTestState('finished');
-
-    const elapsed = (Date.now() - (startTime || 0)) / 60000;
+    const elapsed = (Date.now() - startTimeRef.current) / 60000; // in minutes
     if (elapsed > 0) {
       let correctChars = 0;
       let currentMistakes = 0;
-      userInput.split('').forEach((char, index) => {
-        if (char === textToType[index]) {
-          correctChars++;
-        } else {
-          currentMistakes++;
+      
+      const typedChars = userInput.split('');
+      typedChars.forEach((char, index) => {
+        if (index < textToType.length) {
+          if (char === textToType[index]) {
+            correctChars++;
+          } else {
+            currentMistakes++;
+          }
         }
       });
-      const finalWpm = Math.round((correctChars / 5) / elapsed);
-      const finalAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 0;
-      
-      setWpm(finalWpm);
-      setDisplayedWpm(finalWpm);
-      setAccuracy(finalAccuracy);
-      setMistakeCount(currentMistakes);
-
+  
+      const currentWpm = Math.round((correctChars / 5) / elapsed);
+      const currentAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
+  
       setStats({
-        wpm: finalWpm,
-        accuracy: finalAccuracy,
-        mistakes: currentMistakes,
+        wpm: currentWpm,
+        accuracy: currentAccuracy,
+        mistakes: mistakeCount,
       });
     }
-  }, [startTime, userInput, textToType]);
+  }, [userInput, textToType, mistakeCount, testState]);
 
-  
+  const endTest = useCallback(() => {
+    if (testState !== 'running') return;
+
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+    setTestState('finished');
+    calculateStats(); // Final calculation
+  }, [calculateStats, testState]);
+
   useEffect(() => {
-    if (testState === 'running' && startTime) {
-      // Timer for countdown
+    if (testState === 'running') {
       timerIntervalRef.current = setInterval(() => {
-        const elapsedSeconds = (Date.now() - startTime) / 1000;
+        const elapsedSeconds = (Date.now() - (startTimeRef.current || 0)) / 1000;
         const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
         setTimer(newTimer);
         if (newTimer <= 0) {
@@ -140,49 +149,24 @@ export function TypingTest({ initialText }: { initialText: string }) {
         }
       }, 1000);
 
-      // WPM and Accuracy Calculation
-      wpmIntervalRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 60000; // in minutes
-        if (elapsed > 0) {
-          let correctChars = 0;
-          let currentMistakes = 0;
-          
-          userInput.split('').forEach((char, index) => {
-            if (index < textToType.length) {
-              if (char === textToType[index]) {
-                correctChars++;
-              } else {
-                currentMistakes++;
-              }
-            }
-          });
-
-          const currentWpm = Math.round((correctChars / 5) / elapsed);
-          const currentAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
-
-          setWpm(currentWpm);
-          setAccuracy(currentAccuracy);
-          setMistakeCount(currentMistakes);
-        }
-      }, 200); // Update WPM every 200ms for more responsiveness
+      statsIntervalRef.current = setInterval(calculateStats, 200);
 
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     };
-  }, [testState, startTime, duration, endTest, userInput, textToType]);
+  }, [testState, duration, endTest, calculateStats]);
 
 
   // Smooth animation for displayed WPM
   useEffect(() => {
     const animationFrameId = requestAnimationFrame(() => {
         setDisplayedWpm(prev => {
-            if (testState !== 'running') return wpm;
-            const diff = wpm - prev;
+            const diff = stats.wpm - prev;
             // A smaller smoothing factor makes the animation smoother
             const smoothingFactor = 0.15;
             const newWpm = prev + diff * smoothingFactor; 
@@ -190,7 +174,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         });
     });
     return () => cancelAnimationFrame(animationFrameId);
-  }, [wpm, displayedWpm, testState]);
+  }, [stats.wpm, displayedWpm]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,12 +184,20 @@ export function TypingTest({ initialText }: { initialText: string }) {
     
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
-      setStartTime(Date.now());
+      startTimeRef.current = Date.now();
+    }
+    
+    if (value.length < userInput.length) {
+      // User is deleting text, don't count as mistake
+    } else {
+      const lastChar = value.slice(-1);
+      const lastCharIndex = value.length - 1;
+      if (textToType[lastCharIndex] !== lastChar) {
+        setMistakeCount(prev => prev + 1);
+      }
     }
 
-    if (value.length <= textToType.length) {
-      setUserInput(value);
-    }
+    setUserInput(value);
      if (value.length === textToType.length) {
       endTest();
     }
@@ -231,18 +223,18 @@ export function TypingTest({ initialText }: { initialText: string }) {
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className='flex flex-wrap gap-4'>
-                <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
+                <Tabs value={String(duration)} onValueChange={(v) => { if (testState !== 'running') setDuration(Number(v))}}>
                     <TabsList>
-                        {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)}>{d.label}</TabsTrigger>)}
+                        {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)} disabled={testState === 'running'}>{d.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
                     <TabsList>
-                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value} disabled={testState === 'running'}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => fetchNewText(textType)} disabled={loadingNewText}>
+            <Button variant="ghost" size="icon" onClick={() => fetchNewText(textType)} disabled={loadingNewText || testState === 'running'}>
                 <RefreshCw className={cn("h-4 w-4", loadingNewText && "animate-spin")}/>
             </Button>
         </div>
@@ -255,7 +247,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
             <div className="w-1/3 border-x border-border">
                 <p className="text-sm text-muted-foreground">ACCURACY</p>
-                <p className="text-3xl font-bold text-primary">{accuracy}%</p>
+                <p className="text-3xl font-bold text-primary">{stats.accuracy}%</p>
             </div>
             <div className="w-1/3">
                 <p className="text-sm text-muted-foreground">Timer (in seconds)</p>
@@ -299,7 +291,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         />
         <ResultsDialog 
             open={testState === 'finished'} 
-            stats={{wpm: wpm, accuracy: accuracy, mistakes: mistakeCount}} 
+            stats={stats} 
             onTryAgain={() => fetchNewText(textType)}
             onOpenChange={(open) => {
               if (!open) {
@@ -311,7 +303,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
-
-    
