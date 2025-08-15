@@ -41,19 +41,19 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  const resetTest = useCallback((newText?: string) => {
+  const resetTest = useCallback((newText?: string, focus = true) => {
     setTestState('waiting');
     setUserInput('');
     setTimer(duration);
     setStats({ wpm: 0, accuracy: 100, correctChars: 0, incorrectChars: 0, mistakes: 0 });
     if (intervalRef.current) clearInterval(intervalRef.current);
     if(newText) setTextToType(newText)
-    inputRef.current?.focus();
+    if(focus) inputRef.current?.focus();
   }, [duration]);
 
-  const fetchNewText = useCallback(async (type: TextType) => {
+  const fetchNewText = useCallback(async (type: TextType, focus = true) => {
     setLoadingNewText(true);
-    resetTest();
+    resetTest(undefined, false);
     const { text, error } = await getNewText({ type: type });
     if (error || !text) {
       toast({
@@ -64,6 +64,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setTextToType('The quick brown fox jumps over the lazy dog.'); // fallback text
     } else {
       setTextToType(text);
+      resetTest(text, focus);
     }
     setLoadingNewText(false);
   }, [resetTest, toast]);
@@ -71,7 +72,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const handleTextTypeChange = (v: string) => {
     const newType = v as TextType;
     setTextType(newType);
-    fetchNewText(newType);
+    fetchNewText(newType, false);
   }
 
   useEffect(() => {
@@ -124,12 +125,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (testState === 'finished') return;
-    if (testState === 'waiting') setTestState('running');
+    if (testState === 'waiting' && e.target.value.length > 0) setTestState('running');
     setUserInput(e.target.value);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if(e.ctrlKey && e.key === 'Backspace') {
+    if(e.ctrlKey || e.altKey || e.metaKey) {
+        e.preventDefault();
+    }
+    if (e.key.length > 1 && e.key !== 'Backspace') {
         e.preventDefault();
     }
   }
@@ -175,7 +179,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 <p className="text-3xl font-bold text-primary">{stats.accuracy}%</p>
             </div>
             <div className="w-1/3">
-                <p className="text-sm text-muted-foreground">TIMER</p>
+                <p className="text-sm text-muted-foreground">Timer (in seconds)</p>
                 <p className="text-3xl font-bold text-primary flex items-center justify-center gap-2"><Timer className="h-6 w-6" /> {timer}</p>
             </div>
         </div>
