@@ -101,33 +101,31 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const calculateStats = useCallback(() => {
     if (!startTimeRef.current || testState !== 'running') return;
-  
+
     const elapsed = (Date.now() - startTimeRef.current) / 60000; // in minutes
     if (elapsed > 0) {
-      let correctChars = 0;
-      let currentMistakes = 0;
-      
       const typedChars = userInput.split('');
+      
+      let correctChars = 0;
       typedChars.forEach((char, index) => {
-        if (index < textToType.length) {
-          if (char === textToType[index]) {
-            correctChars++;
-          } else {
-            currentMistakes++;
-          }
+        if (index < textToType.length && char === textToType[index]) {
+          correctChars++;
         }
       });
-  
+
       const currentWpm = Math.round((correctChars / 5) / elapsed);
-      const currentAccuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
-  
+      const currentAccuracy = userInput.length > 0 
+        ? Math.round(((userInput.length - mistakeCount) / userInput.length) * 100) 
+        : 100;
+
       setStats({
         wpm: currentWpm,
-        accuracy: currentAccuracy,
+        accuracy: Math.max(0, currentAccuracy),
         mistakes: mistakeCount,
       });
     }
   }, [userInput, textToType, mistakeCount, testState]);
+
 
   const endTest = useCallback(() => {
     if (testState !== 'running') return;
@@ -167,10 +165,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
     const animationFrameId = requestAnimationFrame(() => {
         setDisplayedWpm(prev => {
             const diff = stats.wpm - prev;
-            // A smaller smoothing factor makes the animation smoother
             const smoothingFactor = 0.15;
             const newWpm = prev + diff * smoothingFactor; 
-            return newWpm;
+            return (Math.abs(diff) < 0.1) ? stats.wpm : newWpm;
         });
     });
     return () => cancelAnimationFrame(animationFrameId);
@@ -187,18 +184,18 @@ export function TypingTest({ initialText }: { initialText: string }) {
       startTimeRef.current = Date.now();
     }
     
-    if (value.length < userInput.length) {
-      // User is deleting text, don't count as mistake
-    } else {
-      const lastChar = value.slice(-1);
-      const lastCharIndex = value.length - 1;
-      if (textToType[lastCharIndex] !== lastChar) {
-        setMistakeCount(prev => prev + 1);
-      }
+    // Count mistakes based on what's currently typed
+    let currentMistakes = 0;
+    for (let i = 0; i < value.length; i++) {
+        if (value[i] !== textToType[i]) {
+            currentMistakes++;
+        }
     }
+    setMistakeCount(currentMistakes);
 
     setUserInput(value);
-     if (value.length === textToType.length) {
+
+    if (value.length >= textToType.length) {
       endTest();
     }
   };
