@@ -203,7 +203,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
       if (index < userInput.length) {
         state = userInput[index] === char ? 'correct' : 'incorrect';
       }
-      return { char, state };
+      const isCurrent = index === userInput.length;
+      return { char, state, isCurrent };
     });
   }, [textToType, userInput]);
 
@@ -246,7 +247,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
         <div
           className={cn(
-            'font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 relative whitespace-pre-wrap',
+            'font-code text-2xl leading-relaxed tracking-wider transition-opacity duration-300 relative whitespace-pre-wrap',
             loadingNewText && 'opacity-20'
           )}
           onClick={() => inputRef.current?.focus()}
@@ -259,23 +260,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 'text-destructive': item.state === 'incorrect' && item.char !== ' ',
                 'bg-destructive/50 rounded-[0.2rem]': item.state === 'incorrect' && item.char === ' ',
                 'text-muted-foreground': item.state === 'untyped',
+                'bg-primary/20 rounded-[0.2rem]': item.isCurrent,
               })}
             >
               {item.char}
             </span>
           ))}
-          {userInput.length < textToType.length && testState !== 'finished' && (
-             <span
-             className="animate-caret-blink absolute"
-             style={{
-               height: '1.6em',
-               width: '2px',
-               backgroundColor: 'hsl(var(--primary))',
-               left: `${userInput.length}ch`,
-               top: '0.15em',
-             }}
-           />
-          )}
         </div>
 
         <input
