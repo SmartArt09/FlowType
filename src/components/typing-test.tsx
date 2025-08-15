@@ -103,9 +103,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
     const elapsed = (Date.now() - (startTime || 0)) / 60000;
     if (elapsed > 0) {
       let correctChars = 0;
+      let currentMistakes = 0;
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
+        } else {
+          currentMistakes++;
         }
       });
       const finalWpm = Math.round((correctChars / 5) / elapsed);
@@ -114,14 +117,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setWpm(finalWpm);
       setDisplayedWpm(finalWpm);
       setAccuracy(finalAccuracy);
+      setMistakeCount(currentMistakes);
 
       setStats({
         wpm: finalWpm,
         accuracy: finalAccuracy,
-        mistakes: mistakeCount,
+        mistakes: currentMistakes,
       });
     }
-  }, [startTime, userInput, textToType, mistakeCount]);
+  }, [startTime, userInput, textToType]);
 
   
   useEffect(() => {
@@ -158,10 +162,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
           setWpm(currentWpm);
           setAccuracy(currentAccuracy);
-          // Only update mistake count, don't rely on it for wpm/accuracy
           setMistakeCount(currentMistakes);
         }
-      }, 1000); // Update WPM every second
+      }, 200); // Update WPM every 200ms for more responsiveness
 
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -178,15 +181,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
   useEffect(() => {
     const animationFrameId = requestAnimationFrame(() => {
         setDisplayedWpm(prev => {
+            if (testState !== 'running') return wpm;
             const diff = wpm - prev;
-            // slow down smoothing if difference is large
-            const smoothingFactor = Math.abs(diff) > 20 ? 0.2 : 0.1;
+            // A smaller smoothing factor makes the animation smoother
+            const smoothingFactor = 0.15;
             const newWpm = prev + diff * smoothingFactor; 
             return newWpm;
         });
     });
     return () => cancelAnimationFrame(animationFrameId);
-  }, [wpm, displayedWpm]);
+  }, [wpm, displayedWpm, testState]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,5 +311,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
 
     
