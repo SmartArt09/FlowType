@@ -94,12 +94,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
       const elapsedMillis = Date.now() - startTime;
       const elapsedSeconds = elapsedMillis / 1000;
       let correctChars = 0;
-      let incorrectChars = 0;
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
-        } else {
-            incorrectChars++;
         }
       });
       const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 0;
@@ -109,10 +106,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
         ...prev,
         wpm: Math.round(wpm),
         accuracy: Math.round(accuracy),
-        mistakes: incorrectChars + mistakeCount,
+        mistakes: prev.mistakes,
       }));
     }
-  }, [startTime, userInput, textToType, mistakeCount]);
+  }, [startTime, userInput, textToType]);
 
   useEffect(() => {
     if (testState === 'running') {
@@ -269,7 +266,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </span>
           ))}
           {userInput.length < textToType.length && testState !== 'finished' && (
-             <span className="absolute w-0.5 bg-primary animate-caret-blink" style={{ left: `${userInput.length}ch` }}/>
+             <span className="animate-caret-blink absolute w-0.5 bg-primary" style={{ left: `${userInput.length}ch` }}/>
           )}
         </div>
 
