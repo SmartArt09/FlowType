@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,8 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getNewText } from '@/app/actions';
-import type { TextType } from '@/lib/texts';
 import { ResultsDialog } from './results-dialog';
 import { cn } from '@/lib/utils';
 import { generateTypingText } from '@/ai/flows/generate-typing-text';
@@ -33,7 +31,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [resultsOpen, setResultsOpen] = useState(false);
 
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
-  const wpmUpdateInterval = useRef<NodeJS.Timeout | null>(null);
   const startTime = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +45,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setDuration(newDuration);
     setTextMode(newMode);
     if (timerInterval.current) clearInterval(timerInterval.current);
-    if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
     startTime.current = null;
     setResultsOpen(false);
 
@@ -59,7 +55,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
       }
     } catch (error) {
       console.error("Failed to fetch new text:", error);
-      // Fallback to initial text or some default
       setTestText(initialText);
     }
 
@@ -67,39 +62,37 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [duration, textMode, initialText]);
 
 
-  const calculateWPM = useCallback(() => {
-    if (!startTime.current || testState !== 'running') return;
-
-    const elapsedMinutes = (Date.now() - startTime.current) / 60000;
-    if (elapsedMinutes === 0) return;
-
-    let correctChars = 0;
-    let currentMistakes = 0;
-    userInput.split('').forEach((char, index) => {
-      if (char === characters[index]) {
-        correctChars++;
-      } else {
-        currentMistakes++;
-      }
-    });
-
-    const wpm = Math.round(correctChars / 5 / elapsedMinutes);
-    const accuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
-
-    setStats({ wpm, accuracy, mistakes: currentMistakes });
-  }, [userInput, characters, testState]);
-
-
   useEffect(() => {
-    if (testState === 'running') {
-      wpmUpdateInterval.current = setInterval(calculateWPM, 200);
-    } else {
-      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
-    }
-    return () => {
-      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
+    const calculateStats = () => {
+        if (testState !== 'running' || !startTime.current) return;
+
+        const elapsedMinutes = (Date.now() - startTime.current) / 60000;
+        if (elapsedMinutes === 0) return;
+
+        let correctChars = 0;
+        let currentMistakes = 0;
+        
+        userInput.split('').forEach((char, index) => {
+            if (char === characters[index]) {
+                correctChars++;
+            } else {
+                currentMistakes++;
+            }
+        });
+
+        const wpm = Math.round((correctChars / 5) / elapsedMinutes);
+        const accuracy = userInput.length > 0 
+            ? Math.round((correctChars / userInput.length) * 100) 
+            : 100;
+        
+        setStats({ wpm, accuracy, mistakes: currentMistakes });
     };
-  }, [testState, calculateWPM]);
+
+    if (testState === 'running') {
+      const interval = setInterval(calculateStats, 200);
+      return () => clearInterval(interval);
+    }
+  }, [testState, userInput, characters]);
 
 
   useEffect(() => {
@@ -111,7 +104,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setTestState('finished');
       setResultsOpen(true);
       if (timerInterval.current) clearInterval(timerInterval.current);
-      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
     }
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
@@ -120,7 +112,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   // Smooth WPM display
   useEffect(() => {
-    const smoothingFactor = 0.1; // Make this smaller for smoother transitions
+    const smoothingFactor = 0.05; // Make this smaller for smoother transitions
     let animationFrameId: number;
     const updateWpm = () => {
       setDisplayedWpm(prev => prev + (stats.wpm - prev) * smoothingFactor);
@@ -136,7 +128,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
     const value = e.target.value;
 
-    if (testState === 'waiting') {
+    if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       startTime.current = Date.now();
     }
