@@ -75,68 +75,51 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setTimer(duration);
   }, [duration]);
 
+  // Main timer and stats calculation
   useEffect(() => {
     if (testState === 'running' && timer > 0) {
       timerInterval.current = setInterval(() => {
-        setTimer(prev => {
-          const newTime = prev - 1;
-          if (newTime <= 0) {
-            if (timerInterval.current) clearInterval(timerInterval.current);
-            setTestState('finished');
-            setResultsOpen(true);
-            return 0;
-          }
-          return newTime;
-        });
+        setTimer(prev => prev - 1);
+        
+        // Calculate stats inside the timer to ensure real-time updates
+        if (startTime.current) {
+            const elapsedMinutes = (Date.now() - startTime.current) / 60000;
+            if (elapsedMinutes > 0) {
+                let correctChars = 0;
+                let mistakes = 0;
+                const currentUserInput = inputRef.current?.value || '';
+
+                currentUserInput.split('').forEach((char, index) => {
+                    if (char === characters[index]) {
+                        correctChars++;
+                    } else {
+                        mistakes++;
+                    }
+                });
+
+                const wpm = Math.round((correctChars / 5) / elapsedMinutes);
+                const accuracy = currentUserInput.length > 0 
+                    ? Math.round((correctChars / currentUserInput.length) * 100) 
+                    : 100;
+                
+                setStats({ wpm, accuracy, mistakes });
+            }
+        }
       }, 1000);
     } else if (timer <= 0 && testState === 'running') {
         if (timerInterval.current) clearInterval(timerInterval.current);
         setTestState('finished');
         setResultsOpen(true);
     }
+
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [testState, timer]);
-
-  // WPM and Accuracy calculation
-  useEffect(() => {
-    if (testState !== 'running' || !startTime.current) return;
-    
-    const calculateStats = () => {
-        const elapsedMinutes = (Date.now() - startTime.current!) / 60000;
-        if (elapsedMinutes === 0) return;
-
-        let correctChars = 0;
-        let currentMistakes = 0;
-        
-        const currentUserInput = inputRef.current?.value || '';
-
-        currentUserInput.split('').forEach((char, index) => {
-            if (char === characters[index]) {
-                correctChars++;
-            } else {
-                currentMistakes++;
-            }
-        });
-
-        const wpm = Math.round((correctChars / 5) / elapsedMinutes);
-        const accuracy = currentUserInput.length > 0 
-            ? Math.round((correctChars / currentUserInput.length) * 100) 
-            : 100;
-        
-        setStats({ wpm, accuracy, mistakes: currentMistakes });
-    }
-
-    const intervalId = setInterval(calculateStats, 200);
-
-    return () => clearInterval(intervalId);
-
-  }, [testState, characters, userInput]);
+  }, [testState, timer, characters]);
 
   // Smooth WPM display
   useEffect(() => {
-    const smoothingFactor = 0.05;
+    const smoothingFactor = 0.05; // Reduced for less sensitivity
     let animationFrameId: number;
     const updateWpm = () => {
       setDisplayedWpm(prev => {
