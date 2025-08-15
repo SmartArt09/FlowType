@@ -102,12 +102,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
       const elapsedMillis = Date.now() - startTime;
       const elapsedSeconds = elapsedMillis / 1000;
       let correctChars = 0;
-      let mistakes = 0;
+      
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
-        } else {
-          mistakes++;
         }
       });
       const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 0;
@@ -124,40 +122,33 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [startTime, userInput, textToType, mistakeCount]);
 
   useEffect(() => {
-    if (testState === 'running') {
-      if (startTime) {
-        intervalRef.current = setInterval(() => {
-          const elapsedSeconds = (Date.now() - startTime) / 1000;
-          const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
-          setTimer(newTimer);
+    if (testState === 'running' && startTime) {
+      intervalRef.current = setInterval(() => {
+        const elapsedSeconds = (Date.now() - startTime) / 1000;
+        const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
+        setTimer(newTimer);
 
-          if (newTimer === 0) {
-            if(intervalRef.current) clearInterval(intervalRef.current);
-            endTest();
+        if (newTimer === 0) {
+          endTest();
+        }
+      }, 1000);
+
+      wpmIntervalRef.current = setInterval(() => {
+        let correctChars = 0;
+        userInput.split('').forEach((char, index) => {
+          if (char === textToType[index]) {
+            correctChars++;
           }
-        }, 1000);
+        });
+        const elapsedMillis = Date.now() - startTime;
+        const elapsedSeconds = elapsedMillis / 1000;
 
-        wpmIntervalRef.current = setInterval(() => {
-          if (!startTime) return;
-          let correctChars = 0;
-          userInput.split('').forEach((char, index) => {
-              if (char === textToType[index]) {
-                  correctChars++;
-              }
-          });
-          const elapsedMillis = Date.now() - startTime;
-          const elapsedSeconds = elapsedMillis / 1000;
+        if (elapsedSeconds > 0) {
+            const currentWpm = (correctChars / 5) / (elapsedSeconds / 60);
+            setStats(prev => ({ ...prev, wpm: currentWpm }));
+        }
+      }, 200);
 
-          if (elapsedSeconds < 2) {
-            // Don't calculate WPM until at least 2 seconds have passed to avoid spikes
-            return;
-          }
-
-          const currentWpm = (correctChars / 5) / (elapsedSeconds / 60);
-          setStats(prev => ({ ...prev, wpm: currentWpm }));
-        }, 200);
-
-      }
     } else {
         if (intervalRef.current) clearInterval(intervalRef.current);
         if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
@@ -219,28 +210,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setStartTime(Date.now());
     }
 
-    if (value.length < userInput.length) {
-      // User pressed backspace
-      setUserInput(value);
-      return;
-    }
-    
-    if (value.length > userInput.length) {
-      const typedChar = value[value.length - 1];
-      const correctChar = textToType[value.length - 1];
-      if (typedChar !== correctChar) {
-        setMistakeCount(prev => prev + 1);
-      }
+    const lastTypedChar = value[value.length - 1];
+    const correspondingTextChar = textToType[value.length - 1];
+    if (value.length > userInput.length && lastTypedChar !== correspondingTextChar) {
+      setMistakeCount(prev => prev + 1);
     }
     
     if (value.length <= textToType.length) {
       setUserInput(value);
     }
   };
-  
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // This function is now empty as we handle mistake counting in handleInputChange
-  }
 
   const characters = useMemo(() => {
     return textToType.split('').map((char, index) => {
@@ -321,7 +300,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
           type="text"
           value={userInput}
           onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
