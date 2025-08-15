@@ -36,14 +36,23 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const characters = useMemo(() => testText.split(''), [testText]);
 
-  const resetTest = useCallback(async (newDuration = duration, newMode = textMode) => {
+  const resetTest = useCallback(async (newDuration: TestDuration = duration, newMode: TextMode = textMode) => {
     setTestState('waiting');
     setUserInput('');
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setDisplayedWpm(0);
-    setDuration(newDuration);
-    setTimer(newDuration);
-    setTextMode(newMode);
+    
+    if (newDuration !== duration) {
+        setDuration(newDuration);
+        setTimer(newDuration);
+    } else {
+        setTimer(duration);
+    }
+
+    if (newMode !== textMode) {
+        setTextMode(newMode);
+    }
+    
     if (timerInterval.current) clearInterval(timerInterval.current);
     startTime.current = null;
     setResultsOpen(false);
@@ -55,12 +64,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
       }
     } catch (error) {
       console.error("Failed to fetch new text:", error);
-      setTestText(initialText);
+      // fallback to initial text if API fails
     }
 
     inputRef.current?.focus();
-  }, [duration, textMode, initialText]);
+  }, [duration, textMode]);
 
+
+  useEffect(() => {
+    setTimer(duration);
+  }, [duration]);
 
   useEffect(() => {
     if (testState === 'running' && timer > 0) {
@@ -75,41 +88,55 @@ export function TypingTest({ initialText }: { initialText: string }) {
           }
           return newTime;
         });
-
-        // WPM and Accuracy calculation
-        if (startTime.current) {
-          const elapsedMinutes = (Date.now() - startTime.current) / 60000;
-          let correctChars = 0;
-          let currentMistakes = 0;
-          
-          const currentUserInput = inputRef.current?.value || '';
-
-          currentUserInput.split('').forEach((char, index) => {
-              if (char === characters[index]) {
-                  correctChars++;
-              } else {
-                  currentMistakes++;
-              }
-          });
-
-          const wpm = elapsedMinutes > 0 ? Math.round((correctChars / 5) / elapsedMinutes) : 0;
-          const accuracy = currentUserInput.length > 0 
-              ? Math.round((correctChars / currentUserInput.length) * 100) 
-              : 100;
-          
-          setStats({ wpm, accuracy, mistakes: currentMistakes });
-        }
-
       }, 1000);
+    } else if (timer <= 0 && testState === 'running') {
+        if (timerInterval.current) clearInterval(timerInterval.current);
+        setTestState('finished');
+        setResultsOpen(true);
     }
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [testState, timer, characters]);
+  }, [testState, timer]);
+
+  // WPM and Accuracy calculation
+  useEffect(() => {
+    if (testState !== 'running' || !startTime.current) return;
+    
+    const calculateStats = () => {
+        const elapsedMinutes = (Date.now() - startTime.current!) / 60000;
+        if (elapsedMinutes === 0) return;
+
+        let correctChars = 0;
+        let currentMistakes = 0;
+        
+        const currentUserInput = inputRef.current?.value || '';
+
+        currentUserInput.split('').forEach((char, index) => {
+            if (char === characters[index]) {
+                correctChars++;
+            } else {
+                currentMistakes++;
+            }
+        });
+
+        const wpm = Math.round((correctChars / 5) / elapsedMinutes);
+        const accuracy = currentUserInput.length > 0 
+            ? Math.round((correctChars / currentUserInput.length) * 100) 
+            : 100;
+        
+        setStats({ wpm, accuracy, mistakes: currentMistakes });
+    }
+
+    const intervalId = setInterval(calculateStats, 200);
+
+    return () => clearInterval(intervalId);
+
+  }, [testState, characters, userInput]);
 
   // Smooth WPM display
   useEffect(() => {
-    const smoothingFactor = 0.1;
+    const smoothingFactor = 0.05;
     let animationFrameId: number;
     const updateWpm = () => {
       setDisplayedWpm(prev => {
@@ -132,7 +159,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       startTime.current = Date.now();
-      setTimer(duration); // Start countdown
     }
     setUserInput(value);
   };
@@ -140,9 +166,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const renderText = () => {
     return characters.map((char, index) => {
-      const isTyped = index < userInput.length;
       let charClass = 'text-muted-foreground/70';
-      if (isTyped) {
+      if (index < userInput.length) {
         charClass = userInput[index] === char ? 'text-foreground' : 'text-destructive';
       }
       if (index === userInput.length) {
@@ -150,7 +175,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
       }
       return (
         <span key={index} className={`transition-colors duration-150 ${charClass}`}>
-          {char}
+          {char === ' ' ? <span>&nbsp;</span> : char}
         </span>
       );
     });
@@ -225,7 +250,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             onChange={handleInputChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className="absolute inset-0 w-full h-full p-4 bg-transparent border-none outline-none text-transparent caret-transparent"
+            className="absolute inset-0 w-full h-full p-4 bg-transparent border-none outline-none text-transparent caret-primary"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck="false"
