@@ -44,10 +44,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
     
     if (newDuration !== duration) {
         setDuration(newDuration);
-        setTimer(newDuration);
-    } else {
-        setTimer(duration);
     }
+    setTimer(newDuration);
 
     if (newMode !== textMode) {
         setTextMode(newMode);
