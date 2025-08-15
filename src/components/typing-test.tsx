@@ -117,7 +117,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   // Smooth WPM display
   useEffect(() => {
-    const smoothingFactor = 0.05; // Reduced for less sensitivity
+    const smoothingFactor = 0.05;
     let animationFrameId: number;
     const updateWpm = () => {
       setDisplayedWpm(prev => {
