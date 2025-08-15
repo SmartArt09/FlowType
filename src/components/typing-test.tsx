@@ -36,6 +36,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [textType, setTextType] = useState<TextType>('commonWords');
   const [timer, setTimer] = useState(duration);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 0, correctChars: 0, incorrectChars: 0, mistakes: 0 });
+  const [displayedWpm, setDisplayedWpm] = useState(0);
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [mistakeCount, setMistakeCount] = useState(0);
@@ -43,6 +44,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const { toast } = useToast();
 
   const resetTest = useCallback((newText?: string) => {
@@ -50,9 +53,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setUserInput('');
     setTimer(duration);
     setStats({ wpm: 0, accuracy: 0, correctChars: 0, incorrectChars: 0, mistakes: 0 });
+    setDisplayedWpm(0);
     setStartTime(null);
     setMistakeCount(0);
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if(newText) setTextToType(newText)
   }, [duration]);
 
@@ -90,6 +95,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
   
   const endTest = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+
     setTestState('finished');
     if (startTime) {
       const elapsedMillis = Date.now() - startTime;
@@ -109,6 +116,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         accuracy: Math.round(accuracy),
         mistakes: prev.mistakes,
       }));
+      setDisplayedWpm(Math.round(wpm));
     }
   }, [startTime, userInput, textToType]);
 
@@ -125,14 +133,42 @@ export function TypingTest({ initialText }: { initialText: string }) {
             endTest();
           }
         }, 1000);
+
+        wpmIntervalRef.current = setInterval(() => {
+          let correctChars = 0;
+          userInput.split('').forEach((char, index) => {
+              if (char === textToType[index]) {
+                  correctChars++;
+              }
+          });
+          const elapsedMillis = Date.now() - startTime;
+          const elapsedSeconds = elapsedMillis / 1000;
+          const currentWpm = (correctChars / 5) / (elapsedSeconds / 60);
+          setStats(prev => ({ ...prev, wpm: currentWpm }));
+        }, 200);
+
       }
     } else {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     };
-  }, [testState, startTime, duration, endTest]);
+  }, [testState, startTime, duration, endTest, userInput, textToType]);
+
+  useEffect(() => {
+    const animationFrameId = requestAnimationFrame(() => {
+      setDisplayedWpm(prev => {
+        const diff = stats.wpm - prev;
+        // Adjust the smoothing factor (e.g., 0.1) for faster/slower transitions
+        const newWpm = prev + diff * 0.1; 
+        return newWpm;
+      });
+    });
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [stats.wpm, displayedWpm]);
 
   useEffect(() => {
     if (testState !== 'finished') {
@@ -150,28 +186,20 @@ export function TypingTest({ initialText }: { initialText: string }) {
         });
 
         const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
-        let wpm = 0;
-        if (startTime && testState === 'running' && typedChars > 0) {
-            const elapsedMillis = Date.now() - startTime;
-            if (elapsedMillis > 500) { // only calculate WPM after 0.5s
-                const elapsedSeconds = elapsedMillis / 1000;
-                wpm = (correctChars / 5) / (elapsedSeconds / 60);
-            }
-        }
         
-        setStats({ 
-            wpm: Math.round(wpm), 
-            accuracy: Math.round(accuracy), 
-            correctChars, 
-            incorrectChars, 
-            mistakes: mistakeCount
-        });
+        setStats(prev => ({
+          ...prev, 
+          accuracy: Math.round(accuracy), 
+          correctChars, 
+          incorrectChars, 
+          mistakes: mistakeCount
+        }));
 
         if (typedChars > 0 && typedChars === textToType.length) {
           endTest();
         }
     }
-  }, [userInput, textToType, startTime, testState, mistakeCount, endTest]);
+  }, [userInput, textToType, testState, mistakeCount, endTest]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (testState === 'finished') return;
@@ -211,7 +239,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   return (
     <Card className={cn(
-        "w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5 transition-all",
+        "w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5 transition-all duration-300",
         (isFocused && testState !== 'finished') || testState === 'running' ? "ring-2 ring-primary" : "ring-0 ring-transparent"
     )}>
       <CardHeader>
@@ -237,7 +265,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         <div className="flex justify-around p-4 rounded-md bg-card/50 mb-6 text-center">
             <div className="w-1/3">
                 <p className="text-sm text-muted-foreground">WPM</p>
-                <p className="text-3xl font-bold text-primary">{stats.wpm}</p>
+                <p className="text-3xl font-bold text-primary">{Math.round(displayedWpm)}</p>
             </div>
             <div className="w-1/3 border-x border-border">
                 <p className="text-sm text-muted-foreground">ACCURACY</p>
