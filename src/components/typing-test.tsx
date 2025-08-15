@@ -9,10 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ResultsDialog } from './results-dialog';
 import { RefreshCw, Timer } from 'lucide-react';
 import { Button } from './ui/button';
-import type { GenerateTypingTextInput } from '@/ai/flows/generate-typing-text';
+import type { TextType } from '@/lib/texts';
+
 
 type TestState = 'waiting' | 'running' | 'finished';
-type TextType = 'commonWords' | 'quotes' | 'codeSnippets';
 
 const DURATIONS = [
   { label: '1m', value: 60 },

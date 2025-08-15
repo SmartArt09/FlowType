@@ -1,10 +1,10 @@
-import { generateTypingText } from '@/ai/flows/generate-typing-text';
 import { TypingTest } from '@/components/typing-test';
 import { TypingTip } from '@/components/typing-tip';
 import { AdBanner } from '@/components/ad-banner';
+import { typingTexts } from '@/lib/texts';
 
 export default async function Home() {
-  const initialTextData = await generateTypingText({ type: 'commonWords' });
+  const initialText = typingTexts.commonWords[0];
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12">
@@ -14,7 +14,7 @@ export default async function Home() {
           <p className="text-muted-foreground mt-2">The ultimate typing test to boost your speed and accuracy.</p>
         </header>
 
-        <TypingTest initialText={initialTextData.text} />
+        <TypingTest initialText={initialText} />
 
         <footer className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
           <TypingTip />
