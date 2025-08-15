@@ -37,7 +37,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [timer, setTimer] = useState(duration);
   const [mistakeCount, setMistakeCount] = useState(0);
   
-  const [stats, setStats] = useState({ wpm: 0, accuracy: 0, mistakes: 0 });
+  const [stats, setStats] = useState({ wpm: 0, accuracy: 100, mistakes: 0 });
   const [displayedWpm, setDisplayedWpm] = useState(0);
 
   const [loadingNewText, setLoadingNewText] = useState(false);
@@ -45,7 +45,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
   const { toast } = useToast();
@@ -56,14 +55,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setTimer(duration);
     setDisplayedWpm(0);
     setMistakeCount(0);
-    setStats({ wpm: 0, accuracy: 0, mistakes: 0 });
+    setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
 
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     
     startTimeRef.current = null;
     
-    if (newText) setTextToType(newText);
+    if (newText) {
+      setTextToType(newText);
+    }
     
     inputRef.current?.focus();
   }, [duration]);
@@ -71,7 +71,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const fetchNewText = useCallback(async (type: TextType) => {
     setLoadingNewText(true);
-    resetTest();
     const { text, error } = await getNewText({ type: type });
     if (error || !text) {
       toast({
@@ -79,86 +78,69 @@ export function TypingTest({ initialText }: { initialText: string }) {
         description: error || 'Could not fetch new text.',
         variant: 'destructive',
       });
-      setTextToType('The quick brown fox jumps over the lazy dog.'); // fallback text
       resetTest('The quick brown fox jumps over the lazy dog.');
     } else {
-      setTextToType(text);
       resetTest(text);
     }
     setLoadingNewText(false);
   }, [resetTest, toast]);
 
   const handleTextTypeChange = (v: string) => {
+    if (testState === 'running') return;
     const newType = v as TextType;
     setTextType(newType);
     fetchNewText(newType);
   }
 
-  useEffect(() => {
-    setTimer(duration);
+  const handleDurationChange = (v: string) => {
+    if (testState === 'running') return;
+    const newDuration = Number(v);
+    setDuration(newDuration);
+    setTimer(newDuration);
     resetTest();
-  }, [duration, resetTest]);
+  }
 
   const calculateStats = useCallback(() => {
-    if (!startTimeRef.current || testState !== 'running') return;
+    if (!startTimeRef.current) return;
 
-    const elapsed = (Date.now() - startTimeRef.current) / 60000; // in minutes
-    if (elapsed > 0) {
-      const typedChars = userInput.split('');
-      
-      let correctChars = 0;
-      typedChars.forEach((char, index) => {
-        if (index < textToType.length && char === textToType[index]) {
-          correctChars++;
-        }
-      });
+    const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
+    
+    const correctChars = userInput.split('').filter((char, index) => char === textToType[index]).length;
+    
+    const wpm = (correctChars / 5) / (elapsedSeconds / 60);
 
-      const currentWpm = Math.round((correctChars / 5) / elapsed);
-      const currentAccuracy = userInput.length > 0 
-        ? Math.round(((userInput.length - mistakeCount) / userInput.length) * 100) 
-        : 100;
-
-      setStats({
-        wpm: currentWpm,
-        accuracy: Math.max(0, currentAccuracy),
-        mistakes: mistakeCount,
-      });
-    }
-  }, [userInput, textToType, mistakeCount, testState]);
+    const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 100;
+    
+    setStats({
+      wpm: Math.round(wpm) || 0,
+      accuracy: Math.round(accuracy) || 100,
+      mistakes: mistakeCount,
+    });
+  }, [userInput, textToType, mistakeCount]);
 
 
-  const endTest = useCallback(() => {
-    if (testState !== 'running') return;
-
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
-    setTestState('finished');
-    calculateStats(); // Final calculation
-  }, [calculateStats, testState]);
-
+  // Timer and stats update effect
   useEffect(() => {
     if (testState === 'running') {
+      startTimeRef.current = startTimeRef.current || Date.now();
       timerIntervalRef.current = setInterval(() => {
         const elapsedSeconds = (Date.now() - (startTimeRef.current || 0)) / 1000;
         const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
         setTimer(newTimer);
+        calculateStats();
         if (newTimer <= 0) {
-          endTest();
+          setTestState('finished');
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         }
-      }, 1000);
-
-      statsIntervalRef.current = setInterval(calculateStats, 200);
-
+      }, 200);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     }
+
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     };
-  }, [testState, duration, endTest, calculateStats]);
-
+  }, [testState, duration, calculateStats]);
 
   // Smooth animation for displayed WPM
   useEffect(() => {
@@ -181,10 +163,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
     
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
-      startTimeRef.current = Date.now();
     }
     
-    // Count mistakes based on what's currently typed
     let currentMistakes = 0;
     for (let i = 0; i < value.length; i++) {
         if (value[i] !== textToType[i]) {
@@ -194,10 +174,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setMistakeCount(currentMistakes);
 
     setUserInput(value);
-
-    if (value.length >= textToType.length) {
-      endTest();
-    }
   };
 
 
@@ -220,7 +196,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className='flex flex-wrap gap-4'>
-                <Tabs value={String(duration)} onValueChange={(v) => { if (testState !== 'running') setDuration(Number(v))}}>
+                <Tabs value={String(duration)} onValueChange={handleDurationChange}>
                     <TabsList>
                         {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)} disabled={testState === 'running'}>{d.label}</TabsTrigger>)}
                     </TabsList>
@@ -244,10 +220,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
             <div className="w-1/3 border-x border-border">
                 <p className="text-sm text-muted-foreground">ACCURACY</p>
-                <p className="text-3xl font-bold text-primary">{stats.accuracy}%</p>
+                <p className="text-3xl font-bold text-primary">{Math.round(stats.accuracy)}%</p>
             </div>
             <div className="w-1/3">
-                <p className="text-sm text-muted-foreground">Timer (in seconds)</p>
+                <p className="text-sm text-muted-foreground">Timer</p>
                 <p className="text-3xl font-bold text-primary flex items-center justify-center gap-2"><Timer className="h-6 w-6" /> {timer}</p>
             </div>
         </div>
@@ -285,6 +261,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
           onPaste={(e) => e.preventDefault()}
           disabled={testState === 'finished' || loadingNewText}
+          autoFocus
         />
         <ResultsDialog 
             open={testState === 'finished'} 
@@ -300,3 +277,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
