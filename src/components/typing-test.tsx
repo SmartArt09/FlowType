@@ -84,38 +84,19 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [duration, resetTest]);
 
   
-  useEffect(() => {
-    if (testState === 'running' && startTime) {
-      intervalRef.current = setInterval(() => {
-        setTimer(prev => {
-          if (prev <= 1) {
-            if(intervalRef.current) clearInterval(intervalRef.current);
-            setTestState('finished');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [testState, startTime]);
-
   const endTest = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setTestState('finished');
     if (startTime) {
       const elapsedMillis = Date.now() - startTime;
       const elapsedSeconds = elapsedMillis / 1000;
-      const typedChars = userInput.length;
       let correctChars = 0;
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
         }
       });
-      const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
+      const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 0;
       const wpm = (correctChars / 5) / (elapsedSeconds / 60);
 
       setStats(prev => ({
@@ -125,6 +106,28 @@ export function TypingTest({ initialText }: { initialText: string }) {
       }));
     }
   }, [startTime, userInput, textToType]);
+
+  useEffect(() => {
+    if (testState === 'running') {
+      if (startTime) {
+        intervalRef.current = setInterval(() => {
+          const elapsedSeconds = (Date.now() - startTime) / 1000;
+          const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
+          setTimer(newTimer);
+
+          if (newTimer === 0) {
+            if(intervalRef.current) clearInterval(intervalRef.current);
+            endTest();
+          }
+        }, 1000);
+      }
+    } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [testState, startTime, duration, endTest]);
 
   useEffect(() => {
     if (testState !== 'finished') {
@@ -160,7 +163,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             mistakes: incorrectChars + mistakeCount
         });
 
-        if (typedChars > 0 && typedChars === textToType.length && incorrectChars === 0) {
+        if (typedChars > 0 && typedChars === textToType.length) {
           endTest();
         }
     }
@@ -218,7 +221,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="relative" onClick={() => inputRef.current?.focus()}>
+      <CardContent className="relative">
         <div className="flex justify-around p-4 rounded-md bg-card/50 mb-6 text-center">
             <div className="w-1/3">
                 <p className="text-sm text-muted-foreground">WPM</p>
@@ -234,7 +237,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
         </div>
 
-        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 whitespace-pre-wrap", loadingNewText && 'opacity-20')}>
+        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 whitespace-pre-wrap", loadingNewText && 'opacity-20')}
+          onClick={() => inputRef.current?.focus()}>
           {characters.map(({ char, state }, index) => (
             <span
               key={index}
@@ -245,7 +249,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 'relative': index === userInput.length
               })}
             >
-              {index === userInput.length && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary caret-blink" />}
+              {index === userInput.length && testState !== 'finished' && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary caret-blink" />}
               {char === ' ' && state === 'incorrect' ? <span className='bg-destructive/50'>&nbsp;</span> : char}
             </span>
           ))}
@@ -265,6 +269,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
             open={testState === 'finished'} 
             stats={stats} 
             onTryAgain={() => fetchNewText(textType)}
+            onOpenChange={(open) => {
+              if (!open) {
+                fetchNewText(textType);
+              }
+            }}
         />
       </CardContent>
     </Card>

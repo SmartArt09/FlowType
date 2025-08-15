@@ -19,12 +19,13 @@ interface ResultsDialogProps {
     mistakes: number;
   };
   onTryAgain: () => void;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function ResultsDialog({ open, stats, onTryAgain }: ResultsDialogProps) {
+export function ResultsDialog({ open, stats, onTryAgain, onOpenChange }: ResultsDialogProps) {
   return (
-    <Dialog open={open}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Test Complete!</DialogTitle>
           <DialogDescription>Here are your results. Practice makes perfect!</DialogDescription>
