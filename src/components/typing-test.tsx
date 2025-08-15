@@ -201,8 +201,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
           mistakes: mistakeCount
         }));
 
-        if (typedChars > 0 && correctChars === textToType.length) {
-          endTest();
+        if (userInput.length === textToType.length) {
+            endTest();
         }
     }
   }, [userInput, textToType, testState, mistakeCount, endTest]);
@@ -220,15 +220,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if(e.ctrlKey || e.altKey || e.metaKey) {
-        e.preventDefault();
-        return;
-    }
     if (e.key === 'Backspace') {
         setMistakeCount(prev => prev + 1);
-    }
-    if (e.key.length > 1 && e.key !== 'Backspace') {
-        e.preventDefault();
     }
   }
 
@@ -246,7 +239,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   return (
     <Card className={cn(
         "w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5 transition-all duration-300",
-        (isFocused && testState !== 'finished') || testState === 'running' ? "ring-2 ring-primary" : "ring-0 ring-transparent"
+        isFocused ? "ring-2 ring-primary" : "ring-0 ring-transparent"
     )}>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -332,5 +325,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
