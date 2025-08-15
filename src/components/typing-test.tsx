@@ -34,7 +34,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [duration, setDuration] = useState(60);
   const [textType, setTextType] = useState<TextType>('commonWords');
   const [timer, setTimer] = useState(duration);
-  const [stats, setStats] = useState({ wpm: 0, accuracy: 0, mistakes: 0 });
+  const [stats, setStats] = useState({ wpm: 0, accuracy: 100, mistakes: 0 });
   const [displayedWpm, setDisplayedWpm] = useState(0);
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -51,7 +51,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setTestState('waiting');
     setUserInput('');
     setTimer(duration);
-    setStats({ wpm: 0, accuracy: 0, mistakes: 0 });
+    setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setDisplayedWpm(0);
     setStartTime(null);
     setMistakeCount(0);
@@ -135,13 +135,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
         if (elapsedSeconds < 1) return;
 
         let correctChars = 0;
-        let incorrectChars = 0;
         
         userInput.split('').forEach((char, index) => {
             if (char === textToType[index]) {
                 correctChars++;
-            } else {
-                incorrectChars++;
             }
         });
 
@@ -175,7 +172,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     }
 
     if (value.length < userInput.length) { // Backspace
-        setMistakeCount(prev => prev + 1);
+        // Backspace is implicitly a mistake in terms of speed, and accuracy is based on final typed characters
     } else { // New character
         const newCharIndex = value.length - 1;
         if (newCharIndex < textToType.length && value[newCharIndex] !== textToType[newCharIndex]) {
