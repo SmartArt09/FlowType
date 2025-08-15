@@ -42,7 +42,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  const resetTest = useCallback((newText?: string, focus = true) => {
+  const resetTest = useCallback((newText?: string, focus = false) => {
     setTestState('waiting');
     setUserInput('');
     setTimer(duration);
@@ -53,7 +53,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if(focus) inputRef.current?.focus();
   }, [duration]);
 
-  const fetchNewText = useCallback(async (type: TextType, focus = true) => {
+  const fetchNewText = useCallback(async (type: TextType, focus = false) => {
     setLoadingNewText(true);
     resetTest(undefined, false);
     const { text, error } = await getNewText({ type: type });
@@ -74,7 +74,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const handleTextTypeChange = (v: string) => {
     const newType = v as TextType;
     setTextType(newType);
-    fetchNewText(newType, true);
+    fetchNewText(newType, false);
   }
 
   useEffect(() => {
@@ -82,9 +82,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     resetTest();
   }, [duration, resetTest]);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
   
   useEffect(() => {
     if (testState === 'running' && startTime) {
@@ -123,11 +120,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
             }
         });
 
-        const accuracy = (correctChars / typedChars) * 100;
+        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
         let wpm = 0;
         if (startTime && testState === 'running') {
             const elapsedMillis = Date.now() - startTime;
-            if (elapsedMillis > 0) {
+            if (elapsedMillis > 500) { // only calculate WPM after 0.5s
                 const elapsedSeconds = elapsedMillis / 1000;
                 wpm = (correctChars / 5) / (elapsedSeconds / 60);
             }
@@ -208,7 +205,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
         </div>
 
-        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300", loadingNewText && 'opacity-20')}>
+        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 whitespace-pre-wrap", loadingNewText && 'opacity-20')}>
           {characters.map(({ char, state }, index) => (
             <span
               key={index}
@@ -234,12 +231,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
           onPaste={(e) => e.preventDefault()}
           disabled={testState === 'finished' || loadingNewText}
-          autoFocus
         />
         <ResultsDialog 
             open={testState === 'finished'} 
             stats={stats} 
-            onTryAgain={() => fetchNewText(textType, true)}
+            onTryAgain={() => fetchNewText(textType, false)}
         />
       </CardContent>
     </Card>
