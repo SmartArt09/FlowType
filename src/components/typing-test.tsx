@@ -148,7 +148,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             }
         });
 
-        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
+        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
         let wpm = 0;
         if (startTime && testState === 'running' && typedChars > 0) {
             const elapsedMillis = Date.now() - startTime;
@@ -265,7 +265,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </span>
           ))}
           {userInput.length < textToType.length && testState !== 'finished' && (
-             <span className="animate-caret-blink absolute w-0.5 bg-primary" style={{ left: `${userInput.length}ch`, top: 0, bottom: 0 }}/>
+             <span
+             className="animate-caret-blink absolute"
+             style={{
+               height: '1.6em',
+               width: '2px',
+               backgroundColor: 'hsl(var(--primary))',
+               left: `${userInput.length}ch`,
+               top: '0.15em',
+             }}
+           />
           )}
         </div>
 
@@ -293,5 +302,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
