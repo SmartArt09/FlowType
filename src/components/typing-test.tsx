@@ -1,164 +1,132 @@
-
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getNewText } from '@/app/actions';
-import { useToast } from '@/hooks/use-toast';
-import { ResultsDialog } from './results-dialog';
-import { RefreshCw, Timer } from 'lucide-react';
-import { Button } from './ui/button';
 import type { TextType } from '@/lib/texts';
-
+import { ResultsDialog } from './results-dialog';
+import { cn } from '@/lib/utils';
+import { generateTypingText } from '@/ai/flows/generate-typing-text';
 
 type TestState = 'waiting' | 'running' | 'finished';
-
-const DURATIONS = [
-  { label: '15s', value: 15 },
-  { label: '30s', value: 30 },
-  { label: '1m', value: 60 },
-  { label: '3m', value: 180 },
-  { label: '5m', value: 300 },
-];
-const TEXT_TYPES: {label: string, value: TextType}[] = [
-    { label: 'Words', value: 'commonWords' },
-    { label: 'Quotes', value: 'quotes' },
-    { label: 'Code', value: 'codeSnippets' },
-]
+type TextMode = 'commonWords' | 'quotes' | 'codeSnippets';
+type TestDuration = 60 | 180 | 300; // 1, 3, 5 minutes in seconds
 
 export function TypingTest({ initialText }: { initialText: string }) {
-  const [textToType, setTextToType] = useState(initialText);
+  const [testText, setTestText] = useState(initialText);
   const [userInput, setUserInput] = useState('');
   const [testState, setTestState] = useState<TestState>('waiting');
-  const [duration, setDuration] = useState(60);
-  const [textType, setTextType] = useState<TextType>('commonWords');
-  const [timer, setTimer] = useState(duration);
-  const [mistakeCount, setMistakeCount] = useState(0);
-  
+  const [timer, setTimer] = useState(60);
+  const [duration, setDuration] = useState<TestDuration>(60);
+  const [textMode, setTextMode] = useState<TextMode>('commonWords');
+  const [isFocused, setIsFocused] = useState(false);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 100, mistakes: 0 });
   const [displayedWpm, setDisplayedWpm] = useState(0);
+  const [resultsOpen, setResultsOpen] = useState(false);
 
-  const [loadingNewText, setLoadingNewText] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-
+  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const wpmUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+  const startTime = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number | null>(null);
 
-  const { toast } = useToast();
+  const characters = useMemo(() => testText.split(''), [testText]);
 
-  const resetTest = useCallback((newText?: string) => {
+  const resetTest = useCallback(async (newDuration = duration, newMode = textMode) => {
     setTestState('waiting');
     setUserInput('');
-    setTimer(duration);
-    setDisplayedWpm(0);
-    setMistakeCount(0);
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
-
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    
-    startTimeRef.current = null;
-    
-    if (newText) {
-      setTextToType(newText);
-    }
-    
-    inputRef.current?.focus();
-  }, [duration]);
-  
-
-  const fetchNewText = useCallback(async (type: TextType) => {
-    setLoadingNewText(true);
-    const { text, error } = await getNewText({ type: type });
-    if (error || !text) {
-      toast({
-        title: 'Error',
-        description: error || 'Could not fetch new text.',
-        variant: 'destructive',
-      });
-      resetTest('The quick brown fox jumps over the lazy dog.');
-    } else {
-      resetTest(text);
-    }
-    setLoadingNewText(false);
-  }, [resetTest, toast]);
-
-  const handleTextTypeChange = (v: string) => {
-    if (testState === 'running') return;
-    const newType = v as TextType;
-    setTextType(newType);
-    fetchNewText(newType);
-  }
-
-  const handleDurationChange = (v: string) => {
-    if (testState === 'running') return;
-    const newDuration = Number(v);
-    setDuration(newDuration);
+    setDisplayedWpm(0);
     setTimer(newDuration);
-    resetTest();
-  }
+    setDuration(newDuration);
+    setTextMode(newMode);
+    if (timerInterval.current) clearInterval(timerInterval.current);
+    if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
+    startTime.current = null;
+    setResultsOpen(false);
 
-  const calculateStats = useCallback(() => {
-    if (!startTimeRef.current) return;
+    try {
+      const result = await generateTypingText({ type: newMode });
+      if (result.text) {
+        setTestText(result.text);
+      }
+    } catch (error) {
+      console.error("Failed to fetch new text:", error);
+      // Fallback to initial text or some default
+      setTestText(initialText);
+    }
 
-    const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
-    
-    const correctChars = userInput.split('').filter((char, index) => char === textToType[index]).length;
-    
-    const wpm = (correctChars / 5) / (elapsedSeconds / 60);
+    inputRef.current?.focus();
+  }, [duration, textMode, initialText]);
 
-    const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 100;
-    
-    setStats({
-      wpm: Math.round(wpm) || 0,
-      accuracy: Math.round(accuracy) || 100,
-      mistakes: mistakeCount,
+
+  const calculateWPM = useCallback(() => {
+    if (!startTime.current || testState !== 'running') return;
+
+    const elapsedMinutes = (Date.now() - startTime.current) / 60000;
+    if (elapsedMinutes === 0) return;
+
+    let correctChars = 0;
+    let currentMistakes = 0;
+    userInput.split('').forEach((char, index) => {
+      if (char === characters[index]) {
+        correctChars++;
+      } else {
+        currentMistakes++;
+      }
     });
-  }, [userInput, textToType, mistakeCount]);
+
+    const wpm = Math.round(correctChars / 5 / elapsedMinutes);
+    const accuracy = userInput.length > 0 ? Math.round((correctChars / userInput.length) * 100) : 100;
+
+    setStats({ wpm, accuracy, mistakes: currentMistakes });
+  }, [userInput, characters, testState]);
 
 
-  // Timer and stats update effect
   useEffect(() => {
     if (testState === 'running') {
-      startTimeRef.current = startTimeRef.current || Date.now();
-      timerIntervalRef.current = setInterval(() => {
-        const elapsedSeconds = (Date.now() - (startTimeRef.current || 0)) / 1000;
-        const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
-        setTimer(newTimer);
-        calculateStats();
-        if (newTimer <= 0) {
-          setTestState('finished');
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        }
-      }, 200);
+      wpmUpdateInterval.current = setInterval(calculateWPM, 200);
     } else {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
     }
-
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
     };
-  }, [testState, duration, calculateStats]);
+  }, [testState, calculateWPM]);
 
-  // Smooth animation for displayed WPM
+
   useEffect(() => {
-    let animationFrameId: number;
-    const animate = () => {
-        setDisplayedWpm(prev => {
-            const diff = stats.wpm - prev;
-            const smoothingFactor = 0.1; 
-            const newWpm = prev + diff * smoothingFactor; 
-            if (Math.abs(diff) < 0.1) {
-              cancelAnimationFrame(animationFrameId);
-              return stats.wpm;
-            }
-            animationFrameId = requestAnimationFrame(animate);
-            return newWpm;
-        });
+    if (testState === 'running' && timer > 0) {
+      timerInterval.current = setInterval(() => {
+        setTimer(prev => prev - 1);
+      }, 1000);
+    } else if (timer === 0 && testState === 'running') {
+      setTestState('finished');
+      setResultsOpen(true);
+      if (timerInterval.current) clearInterval(timerInterval.current);
+      if (wpmUpdateInterval.current) clearInterval(wpmUpdateInterval.current);
     }
-    animationFrameId = requestAnimationFrame(animate);
+    return () => {
+      if (timerInterval.current) clearInterval(timerInterval.current);
+    };
+  }, [testState, timer]);
+
+  // Smooth WPM display
+  useEffect(() => {
+    const smoothingFactor = 0.1; // Make this smaller for smoother transitions
+    let animationFrameId: number;
+    const updateWpm = () => {
+      setDisplayedWpm(prev => prev + (stats.wpm - prev) * smoothingFactor);
+      animationFrameId = requestAnimationFrame(updateWpm);
+    };
+    animationFrameId = requestAnimationFrame(updateWpm);
     return () => cancelAnimationFrame(animationFrameId);
   }, [stats.wpm]);
 
@@ -167,120 +135,119 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (testState === 'finished') return;
 
     const value = e.target.value;
-    
-    if (testState === 'waiting' && value.length > 0) {
-      setTestState('running');
-    }
-    
-    let currentMistakes = 0;
-    for (let i = 0; i < value.length; i++) {
-        if (value[i] !== textToType[i]) {
-            currentMistakes++;
-        }
-    }
-    setMistakeCount(currentMistakes);
 
+    if (testState === 'waiting') {
+      setTestState('running');
+      startTime.current = Date.now();
+    }
     setUserInput(value);
   };
 
 
-  const characters = useMemo(() => {
-    return textToType.split('').map((char, index) => {
-      let state: 'correct' | 'incorrect' | 'untyped' = 'untyped';
-      const isCurrent = index === userInput.length;
-      if (index < userInput.length) {
-        state = userInput[index] === char ? 'correct' : 'incorrect';
+  const renderText = () => {
+    return characters.map((char, index) => {
+      const isTyped = index < userInput.length;
+      let charClass = 'text-muted-foreground/70';
+      if (isTyped) {
+        charClass = userInput[index] === char ? 'text-foreground' : 'text-destructive';
       }
-      return { char, state, isCurrent };
+      if (index === userInput.length) {
+         charClass += ' bg-primary/20 rounded';
+      }
+      return (
+        <span key={index} className={`transition-colors duration-150 ${charClass}`}>
+          {char}
+        </span>
+      );
     });
-  }, [textToType, userInput]);
+  };
 
   return (
-    <Card className={cn(
-        "w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5 transition-all duration-300",
-        isFocused ? "ring-2 ring-primary" : "ring-0 ring-transparent"
-    )}>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className='flex flex-wrap gap-4'>
-                <Tabs value={String(duration)} onValueChange={handleDurationChange}>
-                    <TabsList>
-                        {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)} disabled={testState === 'running'}>{d.label}</TabsTrigger>)}
-                    </TabsList>
-                </Tabs>
-                <Tabs value={textType} onValueChange={handleTextTypeChange}>
-                    <TabsList>
-                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value} disabled={testState === 'running'}>{t.label}</TabsTrigger>)}
-                    </TabsList>
-                </Tabs>
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => fetchNewText(textType)} disabled={loadingNewText || testState === 'running'}>
-                <RefreshCw className={cn("h-4 w-4", loadingNewText && "animate-spin")}/>
-            </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="relative">
-        <div className="flex justify-around p-4 rounded-md bg-card/50 mb-6 text-center">
-            <div className="w-1/3">
-                <p className="text-sm text-muted-foreground">WPM</p>
-                <p className="text-3xl font-bold text-primary">{Math.round(displayedWpm)}</p>
-            </div>
-            <div className="w-1/3 border-x border-border">
-                <p className="text-sm text-muted-foreground">ACCURACY</p>
-                <p className="text-3xl font-bold text-primary">{Math.round(stats.accuracy)}%</p>
-            </div>
-            <div className="w-1/3">
-                <p className="text-sm text-muted-foreground">Timer</p>
-                <p className="text-3xl font-bold text-primary flex items-center justify-center gap-2"><Timer className="h-6 w-6" /> {timer}</p>
-            </div>
-        </div>
-
-        <div
-          className={cn(
-            'font-code text-2xl leading-relaxed tracking-wider transition-opacity duration-300 relative',
-            loadingNewText && 'opacity-20'
-          )}
-          onClick={() => inputRef.current?.focus()}
-        >
-          {characters.map((item, index) => (
-            <span
-              key={index}
-              className={cn({
-                'text-foreground': item.state === 'correct',
-                'text-destructive': item.state === 'incorrect' && item.char !== ' ',
-                'bg-destructive/50 rounded-[0.2rem]': item.state === 'incorrect' && item.char === ' ',
-                'text-muted-foreground': item.state === 'untyped',
-                'bg-primary/20 rounded-[0.2rem]': item.isCurrent,
-              })}
+    <>
+      <Card
+        className={cn(
+          'w-full p-6 sm:p-8 transition-all duration-300 border-2',
+          isFocused ? 'border-primary shadow-lg shadow-primary/10' : 'border-transparent shadow-md'
+        )}
+        onClick={() => inputRef.current?.focus()}
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <div className="flex items-center gap-2">
+            <Select
+                value={duration.toString()}
+                onValueChange={(val) => resetTest(Number(val) as TestDuration)}
+                disabled={testState === 'running'}
             >
-              {item.char}
-            </span>
-          ))}
+                <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Time"/>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="60">1 minute</SelectItem>
+                    <SelectItem value="180">3 minutes</SelectItem>
+                    <SelectItem value="300">5 minutes</SelectItem>
+                </SelectContent>
+            </Select>
+            <Select
+                value={textMode}
+                onValueChange={(val) => resetTest(duration, val as TextMode)}
+                disabled={testState === 'running'}
+            >
+                <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Text Type"/>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="commonWords">Words</SelectItem>
+                    <SelectItem value="quotes">Quotes</SelectItem>
+                    <SelectItem value="codeSnippets">Code</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-6 text-center">
+            <div>
+              <div className="text-sm text-muted-foreground">WPM</div>
+              <div className="text-3xl font-bold text-primary">{Math.round(displayedWpm)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Accuracy</div>
+              <div className="text-3xl font-bold text-primary">{stats.accuracy}%</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Time</div>
+              <div className="text-3xl font-bold text-primary">{timer}s</div>
+            </div>
+          </div>
         </div>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={userInput}
-          onChange={handleInputChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
-          onPaste={(e) => e.preventDefault()}
-          disabled={testState === 'finished' || loadingNewText}
-          autoFocus
-        />
-        <ResultsDialog 
-            open={testState === 'finished'} 
-            stats={stats} 
-            onTryAgain={() => fetchNewText(textType)}
-            onOpenChange={(open) => {
-              if (!open) {
-                fetchNewText(textType);
-              }
-            }}
-        />
-      </CardContent>
-    </Card>
+        <div className="relative text-2xl font-code tracking-wider leading-relaxed p-4 bg-background/50 rounded-lg overflow-hidden">
+          <div className="whitespace-pre-wrap select-none" aria-hidden="true">
+            {renderText()}
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={userInput}
+            onChange={handleInputChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="absolute inset-0 w-full h-full p-4 bg-transparent border-none outline-none text-transparent caret-transparent"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
+            disabled={testState === 'finished'}
+          />
+        </div>
+        <div className="flex justify-center mt-6">
+          <Button onClick={() => resetTest()} size="lg">
+            Reset Test
+          </Button>
+        </div>
+      </Card>
+      <ResultsDialog
+        open={resultsOpen}
+        onOpenChange={setResultsOpen}
+        stats={stats}
+        onTryAgain={() => resetTest()}
+      />
+    </>
   );
 }
