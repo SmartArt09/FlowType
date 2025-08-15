@@ -16,14 +16,14 @@ import { generateTypingText } from '@/ai/flows/generate-typing-text';
 
 type TestState = 'waiting' | 'running' | 'finished';
 type TextMode = 'commonWords' | 'quotes' | 'codeSnippets';
-type TestDuration = 60 | 180 | 300; // 1, 3, 5 minutes in seconds
+type TestDuration = 15 | 30 | 60 | 180 | 300; // in seconds
 
 export function TypingTest({ initialText }: { initialText: string }) {
   const [testText, setTestText] = useState(initialText);
   const [userInput, setUserInput] = useState('');
   const [testState, setTestState] = useState<TestState>('waiting');
-  const [timer, setTimer] = useState(60);
   const [duration, setDuration] = useState<TestDuration>(60);
+  const [timer, setTimer] = useState(duration);
   const [textMode, setTextMode] = useState<TextMode>('commonWords');
   const [isFocused, setIsFocused] = useState(false);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 100, mistakes: 0 });
@@ -41,8 +41,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setUserInput('');
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setDisplayedWpm(0);
-    setTimer(newDuration);
     setDuration(newDuration);
+    setTimer(newDuration);
     setTextMode(newMode);
     if (timerInterval.current) clearInterval(timerInterval.current);
     startTime.current = null;
@@ -63,59 +63,60 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
 
   useEffect(() => {
-    const calculateStats = () => {
-        if (testState !== 'running' || !startTime.current) return;
-
-        const elapsedMinutes = (Date.now() - startTime.current) / 60000;
-        if (elapsedMinutes === 0) return;
-
-        let correctChars = 0;
-        let currentMistakes = 0;
-        
-        userInput.split('').forEach((char, index) => {
-            if (char === characters[index]) {
-                correctChars++;
-            } else {
-                currentMistakes++;
-            }
-        });
-
-        const wpm = Math.round((correctChars / 5) / elapsedMinutes);
-        const accuracy = userInput.length > 0 
-            ? Math.round((correctChars / userInput.length) * 100) 
-            : 100;
-        
-        setStats({ wpm, accuracy, mistakes: currentMistakes });
-    };
-
-    if (testState === 'running') {
-      const interval = setInterval(calculateStats, 200);
-      return () => clearInterval(interval);
-    }
-  }, [testState, userInput, characters]);
-
-
-  useEffect(() => {
     if (testState === 'running' && timer > 0) {
       timerInterval.current = setInterval(() => {
-        setTimer(prev => prev - 1);
+        setTimer(prev => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            if (timerInterval.current) clearInterval(timerInterval.current);
+            setTestState('finished');
+            setResultsOpen(true);
+            return 0;
+          }
+          return newTime;
+        });
+
+        // WPM and Accuracy calculation
+        if (startTime.current) {
+          const elapsedMinutes = (Date.now() - startTime.current) / 60000;
+          let correctChars = 0;
+          let currentMistakes = 0;
+          
+          const currentUserInput = inputRef.current?.value || '';
+
+          currentUserInput.split('').forEach((char, index) => {
+              if (char === characters[index]) {
+                  correctChars++;
+              } else {
+                  currentMistakes++;
+              }
+          });
+
+          const wpm = elapsedMinutes > 0 ? Math.round((correctChars / 5) / elapsedMinutes) : 0;
+          const accuracy = currentUserInput.length > 0 
+              ? Math.round((correctChars / currentUserInput.length) * 100) 
+              : 100;
+          
+          setStats({ wpm, accuracy, mistakes: currentMistakes });
+        }
+
       }, 1000);
-    } else if (timer === 0 && testState === 'running') {
-      setTestState('finished');
-      setResultsOpen(true);
-      if (timerInterval.current) clearInterval(timerInterval.current);
     }
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [testState, timer]);
+  }, [testState, timer, characters]);
 
   // Smooth WPM display
   useEffect(() => {
-    const smoothingFactor = 0.05; // Make this smaller for smoother transitions
+    const smoothingFactor = 0.1;
     let animationFrameId: number;
     const updateWpm = () => {
-      setDisplayedWpm(prev => prev + (stats.wpm - prev) * smoothingFactor);
+      setDisplayedWpm(prev => {
+        const newWpm = prev + (stats.wpm - prev) * smoothingFactor;
+        if (Math.abs(stats.wpm - newWpm) < 0.1) return stats.wpm;
+        return newWpm;
+      });
       animationFrameId = requestAnimationFrame(updateWpm);
     };
     animationFrameId = requestAnimationFrame(updateWpm);
@@ -131,6 +132,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       startTime.current = Date.now();
+      setTimer(duration); // Start countdown
     }
     setUserInput(value);
   };
@@ -170,10 +172,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 onValueChange={(val) => resetTest(Number(val) as TestDuration)}
                 disabled={testState === 'running'}
             >
-                <SelectTrigger className="w-[120px]">
+                <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Time"/>
                 </SelectTrigger>
                 <SelectContent>
+                    <SelectItem value="15">15 seconds</SelectItem>
+                    <SelectItem value="30">30 seconds</SelectItem>
                     <SelectItem value="60">1 minute</SelectItem>
                     <SelectItem value="180">3 minutes</SelectItem>
                     <SelectItem value="300">5 minutes</SelectItem>
