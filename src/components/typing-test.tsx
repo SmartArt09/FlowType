@@ -40,6 +40,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [mistakeCount, setMistakeCount] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [totalTypedChars, setTotalTypedChars] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,6 +56,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setDisplayedWpm(0);
     setStartTime(null);
     setMistakeCount(0);
+    setTotalTypedChars(0);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if(newText) setTextToType(newText)
@@ -143,7 +145,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
         });
 
         const typedChars = userInput.length;
-        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
+        const correctableMistakes = typedChars - correctChars;
+        const accuracy = totalTypedChars > 0 ? ((totalTypedChars - mistakeCount) / totalTypedChars) * 100 : 100;
         const wpm = (correctChars / 5) / (elapsedSeconds / 60);
 
         setStats({
@@ -159,7 +162,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     return () => {
       if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     };
-  }, [testState, startTime, userInput, textToType, mistakeCount]);
+  }, [testState, startTime, userInput, textToType, mistakeCount, totalTypedChars]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,9 +174,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setStartTime(Date.now());
     }
 
-    if (value.length < userInput.length) { // Backspace
-        // Backspace is implicitly a mistake in terms of speed, and accuracy is based on final typed characters
-    } else { // New character
+    if (value.length > userInput.length) { // New character typed
+        setTotalTypedChars(prev => prev + 1);
         const newCharIndex = value.length - 1;
         if (newCharIndex < textToType.length && value[newCharIndex] !== textToType[newCharIndex]) {
             setMistakeCount(prev => prev + 1);
