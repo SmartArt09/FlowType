@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -237,20 +238,20 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
         </div>
 
-        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 whitespace-pre-wrap", loadingNewText && 'opacity-20')}
-          onClick={() => inputRef.current?.focus()}>
+        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300", loadingNewText && 'opacity-20')}
+          >
           {characters.map(({ char, state }, index) => (
             <span
               key={index}
-              className={cn({
+              className={cn('relative', {
                 'text-muted-foreground': state === 'untyped',
                 'text-foreground': state === 'correct',
-                'text-destructive': state === 'incorrect',
-                'relative': index === userInput.length
+                'text-destructive': state === 'incorrect' && char !== ' ',
+                'bg-destructive/50': state === 'incorrect' && char === ' '
               })}
             >
-              {index === userInput.length && testState !== 'finished' && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary caret-blink" />}
-              {char === ' ' && state === 'incorrect' ? <span className='bg-destructive/50'>&nbsp;</span> : char}
+              {index === userInput.length && testState !== 'finished' && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-caret-blink" />}
+              {char}
             </span>
           ))}
         </div>
@@ -279,3 +280,4 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
