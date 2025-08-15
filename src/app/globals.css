@@ -89,8 +89,6 @@
   50% { opacity: 0; }
 }
 
-.caret-blink {
+.animate-caret-blink {
   animation: caret-blink 1.2s infinite;
 }
-
-    

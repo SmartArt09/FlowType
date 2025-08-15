@@ -94,9 +94,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
       const elapsedMillis = Date.now() - startTime;
       const elapsedSeconds = elapsedMillis / 1000;
       let correctChars = 0;
+      let incorrectChars = 0;
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
+        } else {
+            incorrectChars++;
         }
       });
       const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 0;
@@ -106,7 +109,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         ...prev,
         wpm: Math.round(wpm),
         accuracy: Math.round(accuracy),
-        mistakes: prev.incorrectChars + mistakeCount,
+        mistakes: incorrectChars + mistakeCount,
       }));
     }
   }, [startTime, userInput, textToType, mistakeCount]);
@@ -140,18 +143,17 @@ export function TypingTest({ initialText }: { initialText: string }) {
         
         const typedChars = userInput.length;
         
-        textToType.split('').slice(0, typedChars).forEach((char, index) => {
-            if (userInput[index] === undefined) return;
-            if (char === userInput[index]) {
+        userInput.split('').forEach((char, index) => {
+            if (char === textToType[index]) {
                 correctChars++;
             } else {
                 incorrectChars++;
             }
         });
 
-        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
+        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
         let wpm = 0;
-        if (startTime && testState === 'running') {
+        if (startTime && testState === 'running' && typedChars > 0) {
             const elapsedMillis = Date.now() - startTime;
             if (elapsedMillis > 500) { // only calculate WPM after 0.5s
                 const elapsedSeconds = elapsedMillis / 1000;
@@ -199,29 +201,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }
 
   const characters = useMemo(() => {
-    let correctPart = '';
-    let incorrectPart = '';
-    let untypedPart = textToType;
-
-    let firstMistake = -1;
-    for(let i=0; i < userInput.length; i++) {
-        if(userInput[i] !== textToType[i]) {
-            firstMistake = i;
-            break;
-        }
-    }
-
-    if(firstMistake === -1) {
-        correctPart = textToType.substring(0, userInput.length);
-        untypedPart = textToType.substring(userInput.length);
-    } else {
-        correctPart = textToType.substring(0, firstMistake);
-        const incorrectLength = userInput.length - firstMistake;
-        incorrectPart = textToType.substring(firstMistake, firstMistake + incorrectLength);
-        untypedPart = textToType.substring(firstMistake + incorrectLength);
-    }
-
-    return { correctPart, incorrectPart, untypedPart };
+    return textToType.split('').map((char, index) => {
+      const state =
+        index < userInput.length
+          ? userInput[index] === char
+            ? 'correct'
+            : 'incorrect'
+          : 'untyped';
+      return { char, state };
+    });
   }, [textToType, userInput]);
 
   return (
@@ -263,18 +251,26 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
         <div
           className={cn(
-            'font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 relative',
+            'font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 relative whitespace-pre-wrap',
             loadingNewText && 'opacity-20'
           )}
           onClick={() => inputRef.current?.focus()}
         >
-          <span className="text-foreground">{characters.correctPart}</span>
-          <span className="bg-destructive/50 text-destructive-foreground rounded-[0.2rem]">{characters.incorrectPart}</span>
-          {testState !== 'finished' && (
-              <span className="absolute w-0.5 bg-primary animate-caret-blink" />
+          {characters.map((item, index) => (
+            <span
+              key={index}
+              className={cn({
+                'text-foreground': item.state === 'correct',
+                'text-destructive-foreground bg-destructive/50 rounded-[0.2rem]': item.state === 'incorrect',
+                'text-muted-foreground': item.state === 'untyped',
+              })}
+            >
+              {item.char}
+            </span>
+          ))}
+          {userInput.length < textToType.length && testState !== 'finished' && (
+             <span className="absolute w-0.5 bg-primary animate-caret-blink" style={{ left: `${userInput.length}ch` }}/>
           )}
-          <span className="text-muted-foreground">{characters.untypedPart}</span>
-
         </div>
 
         <input
@@ -301,5 +297,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
