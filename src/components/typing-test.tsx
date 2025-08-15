@@ -144,16 +144,23 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   // Smooth animation for displayed WPM
   useEffect(() => {
-    const animationFrameId = requestAnimationFrame(() => {
+    let animationFrameId: number;
+    const animate = () => {
         setDisplayedWpm(prev => {
             const diff = stats.wpm - prev;
-            const smoothingFactor = 0.15;
+            const smoothingFactor = 0.1; 
             const newWpm = prev + diff * smoothingFactor; 
-            return (Math.abs(diff) < 0.1) ? stats.wpm : newWpm;
+            if (Math.abs(diff) < 0.1) {
+              cancelAnimationFrame(animationFrameId);
+              return stats.wpm;
+            }
+            animationFrameId = requestAnimationFrame(animate);
+            return newWpm;
         });
-    });
+    }
+    animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [stats.wpm, displayedWpm]);
+  }, [stats.wpm]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +237,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
         <div
           className={cn(
-            'font-code text-2xl leading-relaxed tracking-wider transition-opacity duration-300 relative whitespace-pre-wrap',
+            'font-code text-2xl leading-relaxed tracking-wider transition-opacity duration-300 relative',
             loadingNewText && 'opacity-20'
           )}
           onClick={() => inputRef.current?.focus()}
@@ -277,5 +284,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
