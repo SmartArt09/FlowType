@@ -102,9 +102,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
       const elapsedMillis = Date.now() - startTime;
       const elapsedSeconds = elapsedMillis / 1000;
       let correctChars = 0;
+      let mistakes = 0;
       userInput.split('').forEach((char, index) => {
         if (char === textToType[index]) {
           correctChars++;
+        } else {
+          mistakes++;
         }
       });
       const accuracy = userInput.length > 0 ? (correctChars / userInput.length) * 100 : 0;
@@ -114,11 +117,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
         ...prev,
         wpm: Math.round(wpm),
         accuracy: Math.round(accuracy),
-        mistakes: prev.mistakes,
+        mistakes: mistakeCount,
       }));
       setDisplayedWpm(Math.round(wpm));
     }
-  }, [startTime, userInput, textToType]);
+  }, [startTime, userInput, textToType, mistakeCount]);
 
   useEffect(() => {
     if (testState === 'running') {
@@ -210,19 +213,33 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (testState === 'finished') return;
     const value = e.target.value;
+
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       setStartTime(Date.now());
     }
+
+    if (value.length < userInput.length) {
+      // User pressed backspace
+      setUserInput(value);
+      return;
+    }
+    
+    if (value.length > userInput.length) {
+      const typedChar = value[value.length - 1];
+      const correctChar = textToType[value.length - 1];
+      if (typedChar !== correctChar) {
+        setMistakeCount(prev => prev + 1);
+      }
+    }
+    
     if (value.length <= textToType.length) {
       setUserInput(value);
     }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-        setMistakeCount(prev => prev + 1);
-    }
+    // This function is now empty as we handle mistake counting in handleInputChange
   }
 
   const characters = useMemo(() => {
