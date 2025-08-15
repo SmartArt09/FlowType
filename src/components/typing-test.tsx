@@ -51,10 +51,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
     inputRef.current?.focus();
   }, [duration]);
 
-  const fetchNewText = useCallback(async () => {
+  const fetchNewText = useCallback(async (type: TextType) => {
     setLoadingNewText(true);
     resetTest();
-    const { text, error } = await getNewText({ type: textType });
+    const { text, error } = await getNewText({ type: type });
     if (error || !text) {
       toast({
         title: 'Error',
@@ -66,8 +66,13 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setTextToType(text);
     }
     setLoadingNewText(false);
-  }, [textType, resetTest, toast]);
+  }, [resetTest, toast]);
 
+  const handleTextTypeChange = (v: string) => {
+    const newType = v as TextType;
+    setTextType(newType);
+    fetchNewText(newType);
+  }
 
   useEffect(() => {
     setTimer(duration);
@@ -122,6 +127,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (testState === 'waiting') setTestState('running');
     setUserInput(e.target.value);
   };
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if(e.ctrlKey && e.key === 'Backspace') {
+        e.preventDefault();
+    }
+  }
 
   const characters = useMemo(() => textToType.split('').map((char, index) => {
     const typedChar = userInput[index];
@@ -142,13 +153,13 @@ export function TypingTest({ initialText }: { initialText: string }) {
                         {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)}>{d.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
-                <Tabs value={textType} onValueChange={(v) => setTextType(v as TextType)}>
+                <Tabs value={textType} onValueChange={handleTextTypeChange}>
                     <TabsList>
                         {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => fetchNewText()} disabled={loadingNewText}>
+            <Button variant="ghost" size="icon" onClick={() => fetchNewText(textType)} disabled={loadingNewText}>
                 <RefreshCw className={cn("h-4 w-4", loadingNewText && "animate-spin")}/>
             </Button>
         </div>
@@ -169,7 +180,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
         </div>
 
-        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-all transition-opacity duration-300", loadingNewText && 'opacity-20')}>
+        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300", loadingNewText && 'opacity-20')}>
           {characters.map(({ char, state }, index) => (
             <span
               key={index}
@@ -180,7 +191,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 'relative': index === userInput.length
               })}
             >
-              {index === userInput.length && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-caret-blink" />}
+              {index === userInput.length && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary caret-blink" />}
               {char === ' ' && state === 'incorrect' ? <span className='bg-destructive/50'>&nbsp;</span> : char}
             </span>
           ))}
@@ -191,6 +202,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
           type="text"
           value={userInput}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
           onPaste={(e) => e.preventDefault()}
           disabled={testState === 'finished' || loadingNewText}
@@ -199,7 +211,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         <ResultsDialog 
             open={testState === 'finished'} 
             stats={stats} 
-            onTryAgain={() => fetchNewText()}
+            onTryAgain={() => fetchNewText(textType)}
         />
       </CardContent>
     </Card>

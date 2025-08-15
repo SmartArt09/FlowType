@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Keyboard } from 'lucide-react';
-import { PolicyDialog } from './policy-dialog';
 
 export function Header() {
   return (
@@ -12,12 +11,12 @@ export function Header() {
             <span className="text-xl font-bold tracking-tighter">TypeFlow</span>
           </Link>
           <nav className="flex items-center gap-4 sm:gap-6">
-             <PolicyDialog title="About Us">
-              <button className="text-sm font-medium hover:text-primary transition-colors">About</button>
-            </PolicyDialog>
-            <PolicyDialog title="Contact Us">
-              <button className="text-sm font-medium hover:text-primary transition-colors">Contact</button>
-            </PolicyDialog>
+             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
+                About
+             </Link>
+             <Link href="/contact" className="text-sm font-medium hover:text-primary transition-colors">
+                Contact
+             </Link>
           </nav>
         </div>
       </div>
