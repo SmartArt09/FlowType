@@ -55,9 +55,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if(newText) setTextToType(newText)
   }, [duration]);
 
-  const fetchNewText = useCallback(async (type: TextType) => {
+  const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
     setLoadingNewText(true);
-    resetTest(undefined);
+    if(!isInitial) {
+      resetTest(undefined);
+    }
     const { text, error } = await getNewText({ type: type });
     if (error || !text) {
       toast({
@@ -76,7 +78,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const handleTextTypeChange = (v: string) => {
     const newType = v as TextType;
     setTextType(newType);
-    fetchNewText(newType);
+    fetchNewText(newType, true);
   }
 
   useEffect(() => {
@@ -104,9 +106,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
         ...prev,
         wpm: Math.round(wpm),
         accuracy: Math.round(accuracy),
+        mistakes: prev.incorrectChars + mistakeCount,
       }));
     }
-  }, [startTime, userInput, textToType]);
+  }, [startTime, userInput, textToType, mistakeCount]);
 
   useEffect(() => {
     if (testState === 'running') {
@@ -146,7 +149,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             }
         });
 
-        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
+        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
         let wpm = 0;
         if (startTime && testState === 'running') {
             const elapsedMillis = Date.now() - startTime;
@@ -172,11 +175,14 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (testState === 'finished') return;
-    if (testState === 'waiting' && e.target.value.length > 0) {
+    const value = e.target.value;
+    if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       setStartTime(Date.now());
     }
-    setUserInput(e.target.value);
+    if (value.length <= textToType.length) {
+      setUserInput(value);
+    }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -192,14 +198,31 @@ export function TypingTest({ initialText }: { initialText: string }) {
     }
   }
 
-  const characters = useMemo(() => textToType.split('').map((char, index) => {
-    const typedChar = userInput[index];
-    let state: 'correct' | 'incorrect' | 'untyped' = 'untyped';
-    if (typedChar !== undefined) {
-      state = typedChar === char ? 'correct' : 'incorrect';
+  const characters = useMemo(() => {
+    let correctPart = '';
+    let incorrectPart = '';
+    let untypedPart = textToType;
+
+    let firstMistake = -1;
+    for(let i=0; i < userInput.length; i++) {
+        if(userInput[i] !== textToType[i]) {
+            firstMistake = i;
+            break;
+        }
     }
-    return { char, state };
-  }), [textToType, userInput]);
+
+    if(firstMistake === -1) {
+        correctPart = textToType.substring(0, userInput.length);
+        untypedPart = textToType.substring(userInput.length);
+    } else {
+        correctPart = textToType.substring(0, firstMistake);
+        const incorrectLength = userInput.length - firstMistake;
+        incorrectPart = textToType.substring(firstMistake, firstMistake + incorrectLength);
+        untypedPart = textToType.substring(firstMistake + incorrectLength);
+    }
+
+    return { correctPart, incorrectPart, untypedPart };
+  }, [textToType, userInput]);
 
   return (
     <Card className="w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5">
@@ -238,22 +261,20 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </div>
         </div>
 
-        <div className={cn("font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300", loadingNewText && 'opacity-20')}
-          >
-          {characters.map(({ char, state }, index) => (
-            <span
-              key={index}
-              className={cn('relative', {
-                'text-muted-foreground': state === 'untyped',
-                'text-foreground': state === 'correct',
-                'text-destructive': state === 'incorrect' && char !== ' ',
-                'bg-destructive/50': state === 'incorrect' && char === ' '
-              })}
-            >
-              {index === userInput.length && testState !== 'finished' && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-caret-blink" />}
-              {char}
-            </span>
-          ))}
+        <div
+          className={cn(
+            'font-code text-2xl leading-relaxed tracking-wider break-words transition-opacity duration-300 relative',
+            loadingNewText && 'opacity-20'
+          )}
+          onClick={() => inputRef.current?.focus()}
+        >
+          <span className="text-foreground">{characters.correctPart}</span>
+          <span className="bg-destructive/50 text-destructive-foreground rounded-[0.2rem]">{characters.incorrectPart}</span>
+          {testState !== 'finished' && (
+              <span className="absolute w-0.5 bg-primary animate-caret-blink" />
+          )}
+          <span className="text-muted-foreground">{characters.untypedPart}</span>
+
         </div>
 
         <input
@@ -281,3 +302,4 @@ export function TypingTest({ initialText }: { initialText: string }) {
   );
 }
 
+    
