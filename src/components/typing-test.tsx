@@ -15,6 +15,8 @@ import type { TextType } from '@/lib/texts';
 type TestState = 'waiting' | 'running' | 'finished';
 
 const DURATIONS = [
+  { label: '15s', value: 15 },
+  { label: '30s', value: 30 },
   { label: '1m', value: 60 },
   { label: '3m', value: 180 },
   { label: '5m', value: 300 },
