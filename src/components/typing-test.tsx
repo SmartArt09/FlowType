@@ -148,7 +148,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             }
         });
 
-        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 0;
+        const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
         let wpm = 0;
         if (startTime && testState === 'running' && typedChars > 0) {
             const elapsedMillis = Date.now() - startTime;
@@ -163,7 +163,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             accuracy: Math.round(accuracy), 
             correctChars, 
             incorrectChars, 
-            mistakes: incorrectChars + mistakeCount
+            mistakes: mistakeCount
         });
 
         if (typedChars > 0 && typedChars === textToType.length) {
@@ -199,12 +199,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const characters = useMemo(() => {
     return textToType.split('').map((char, index) => {
-      const state =
-        index < userInput.length
-          ? userInput[index] === char
-            ? 'correct'
-            : 'incorrect'
-          : 'untyped';
+      let state: 'correct' | 'incorrect' | 'untyped' = 'untyped';
+      if (index < userInput.length) {
+        state = userInput[index] === char ? 'correct' : 'incorrect';
+      }
       return { char, state };
     });
   }, [textToType, userInput]);
@@ -258,7 +256,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
               key={index}
               className={cn({
                 'text-foreground': item.state === 'correct',
-                'text-destructive-foreground bg-destructive/50 rounded-[0.2rem]': item.state === 'incorrect',
+                'text-destructive': item.state === 'incorrect' && item.char !== ' ',
+                'bg-destructive/50 rounded-[0.2rem]': item.state === 'incorrect' && item.char === ' ',
                 'text-muted-foreground': item.state === 'untyped',
               })}
             >
@@ -266,7 +265,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             </span>
           ))}
           {userInput.length < textToType.length && testState !== 'finished' && (
-             <span className="animate-caret-blink absolute w-0.5 bg-primary" style={{ left: `${userInput.length}ch` }}/>
+             <span className="animate-caret-blink absolute w-0.5 bg-primary" style={{ left: `${userInput.length}ch`, top: 0, bottom: 0 }}/>
           )}
         </div>
 
@@ -294,3 +293,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    

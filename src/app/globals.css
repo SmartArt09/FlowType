@@ -84,11 +84,15 @@
   }
 }
 
+@layer utilities {
+  .animate-caret-blink {
+    animation: caret-blink 1.2s infinite;
+  }
+}
+
 @keyframes caret-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
 
-.animate-caret-blink {
-  animation: caret-blink 1.2s infinite;
-}
+    
