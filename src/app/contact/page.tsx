@@ -18,12 +18,12 @@ export default function ContactPage() {
                 We&apos;d love to hear from you! Whether you have a question, feedback, or just want to say hello, feel free to reach out to us.
               </p>
               <p>
-                You can contact us via email at: <a href="mailto:support@typeflow.app" className="text-primary hover:underline">support@typeflow.app</a>.
+                You can contact us via email at: <a href="mailto:support@flowtype.app" className="text-primary hover:underline">support@flowtype.app</a>.
               </p>
               <p>
-                We do our best to respond to all inquiries within 24-48 hours. Your feedback is important to us and helps us improve TypeFlow for everyone.
+                We do our best to respond to all inquiries within 24-48 hours. Your feedback is important to us and helps us improve FlowType for everyone.
               </p>
-              <p>Thank you for using TypeFlow!</p>
+              <p>Thank you for using FlowType!</p>
             </div>
           </CardContent>
         </Card>

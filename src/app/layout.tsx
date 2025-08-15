@@ -5,17 +5,17 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 
 export const metadata: Metadata = {
-  title: 'TypeFlow',
+  title: 'FlowType',
   description: 'The ultimate typing test to boost your speed and accuracy.',
   openGraph: {
-    title: 'TypeFlow',
+    title: 'FlowType',
     description: 'The ultimate typing test to boost your speed and accuracy.',
     images: [{ url: 'https://placehold.co/1200x630.png', width: 1200, height: 630 }],
-    siteName: 'TypeFlow',
+    siteName: 'FlowType',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TypeFlow',
+    title: 'FlowType',
     description: 'The ultimate typing test to boost your speed and accuracy.',
     images: ['https://placehold.co/1200x630.png'],
   },

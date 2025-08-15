@@ -16,16 +16,16 @@ export function SocialShareButtons({ stats }: SocialShareButtonsProps) {
   const [postText, setPostText] = useState('');
 
   useEffect(() => {
-    setPostText(`I just scored ${stats.wpm} WPM with ${stats.accuracy}% accuracy on TypeFlow!`);
+    setPostText(`I just scored ${stats.wpm} WPM with ${stats.accuracy}% accuracy on FlowType!`);
   }, [stats]);
 
   const appUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const encodedPostText = encodeURIComponent(postText + `\n\nChallenge me on TypeFlow! `);
+  const encodedPostText = encodeURIComponent(postText + `\n\nChallenge me on FlowType! `);
 
   const shareUrls = {
     twitter: `https://twitter.com/intent/tweet?text=${encodedPostText}&url=${encodeURIComponent(appUrl)}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}&quote=${encodedPostText}`,
-    linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(appUrl)}&title=My%20TypeFlow%20Result!&summary=${encodedPostText}`,
+    linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(appUrl)}&title=My%20FlowType%20Result!&summary=${encodedPostText}`,
   };
 
   const handleShare = (url: string) => {

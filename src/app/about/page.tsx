@@ -8,17 +8,17 @@ export default function AboutPage() {
           <CardHeader>
             <CardTitle>
               <h1 className="text-4xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
-                About TypeFlow
+                About FlowType
               </h1>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="prose prose-lg dark:prose-invert max-w-none">
               <p>
-                Welcome to TypeFlow, the ultimate destination for improving your typing speed and accuracy. Our mission is to provide a clean, modern, and engaging platform for users of all skill levels to practice and enhance their typing abilities.
+                Welcome to FlowType, the ultimate destination for improving your typing speed and accuracy. Our mission is to provide a clean, modern, and engaging platform for users of all skill levels to practice and enhance their typing abilities.
               </p>
               <p>
-                At TypeFlow, we believe that typing is a fundamental skill in today&apos;s digital world. Whether you&apos;re a student, a professional, or just someone looking to type faster, our carefully curated typing tests and real-time feedback are designed to help you achieve your goals.
+                At FlowType, we believe that typing is a fundamental skill in today&apos;s digital world. Whether you&apos;re a student, a professional, or just someone looking to type faster, our carefully curated typing tests and real-time feedback are designed to help you achieve your goals.
               </p>
               <h3 className="text-2xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
                 Our Features

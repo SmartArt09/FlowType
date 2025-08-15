@@ -8,7 +8,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Keyboard className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold tracking-tighter text-primary">TypeFlow</span>
+            <span className="text-xl font-bold tracking-tighter text-primary">FlowType</span>
           </Link>
           <nav className="flex items-center gap-4 sm:gap-6">
              <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
