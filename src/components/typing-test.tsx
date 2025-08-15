@@ -39,6 +39,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [mistakeCount, setMistakeCount] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -209,7 +210,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [textToType, userInput]);
 
   return (
-    <Card className="w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5">
+    <Card className={cn(
+        "w-full bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5 transition-all",
+        (isFocused && testState !== 'finished') || testState === 'running' ? "ring-2 ring-primary" : "ring-0 ring-transparent"
+    )}>
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className='flex flex-wrap gap-4'>
@@ -274,6 +278,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
           value={userInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-default"
           onPaste={(e) => e.preventDefault()}
           disabled={testState === 'finished' || loadingNewText}
