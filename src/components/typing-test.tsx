@@ -59,8 +59,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setTotalTypedChars(0);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    if(newText) setTextToType(newText)
-  }, [duration]);
+    if(newText !== null) setTextToType(newText || textToType)
+  }, [duration, textToType]);
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
     setLoadingNewText(true);
