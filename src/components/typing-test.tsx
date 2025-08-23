@@ -48,7 +48,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const { toast } = useToast();
 
-  const resetTest = useCallback((newText?: string) => {
+  const resetTest = useCallback((newText?: string | null) => {
     setTestState('waiting');
     setUserInput('');
     setTimer(duration);
@@ -190,7 +190,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.ctrlKey || e.metaKey) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
     }
   }
