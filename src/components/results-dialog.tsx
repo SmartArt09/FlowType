@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,9 +24,20 @@ interface ResultsDialogProps {
 }
 
 export function ResultsDialog({ open, stats, onTryAgain, onOpenChange }: ResultsDialogProps) {
+  const tryAgainButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleOpenAutoFocus = (e: Event) => {
+    e.preventDefault();
+    tryAgainButtonRef.current?.focus();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" hideCloseButton>
+      <DialogContent 
+        className="sm:max-w-md" 
+        hideCloseButton
+        onOpenAutoFocus={handleOpenAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>Test Complete!</DialogTitle>
           <DialogDescription>Here are your results. Practice makes perfect!</DialogDescription>
@@ -48,7 +60,7 @@ export function ResultsDialog({ open, stats, onTryAgain, onOpenChange }: Results
         <SocialShareButtons stats={stats} />
         
         <DialogFooter className='sm:justify-center mt-4'>
-          <Button onClick={onTryAgain} className="w-full">
+          <Button ref={tryAgainButtonRef} onClick={onTryAgain} className="w-full">
             Try Again
           </Button>
         </DialogFooter>
