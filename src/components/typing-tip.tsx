@@ -17,7 +17,7 @@ export function TypingTip() {
   if (!tip) return null;
 
   return (
-    <Card className="bg-card/50 border-dashed h-full">
+    <Card className="bg-card/50 h-full">
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
           <Lightbulb className="h-8 w-8 text-primary shrink-0" />
