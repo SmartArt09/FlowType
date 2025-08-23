@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,11 +23,9 @@ interface ResultsDialogProps {
 }
 
 export function ResultsDialog({ open, stats, onTryAgain, onOpenChange }: ResultsDialogProps) {
-  const tryAgainButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleOpenAutoFocus = (e: Event) => {
     e.preventDefault();
-    tryAgainButtonRef.current?.focus();
   };
 
   return (
@@ -60,7 +57,7 @@ export function ResultsDialog({ open, stats, onTryAgain, onOpenChange }: Results
         <SocialShareButtons stats={stats} />
         
         <DialogFooter className='sm:justify-center mt-4'>
-          <Button ref={tryAgainButtonRef} onClick={onTryAgain} className="w-full">
+          <Button onClick={onTryAgain} className="w-full">
             Try Again
           </Button>
         </DialogFooter>
