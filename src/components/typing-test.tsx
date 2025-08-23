@@ -38,9 +38,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [displayedWpm, setDisplayedWpm] = useState(0);
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [mistakeCount, setMistakeCount] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
-  const [totalTypedChars, setTotalTypedChars] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,11 +53,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setDisplayedWpm(0);
     setStartTime(null);
-    setMistakeCount(0);
-    setTotalTypedChars(0);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    if(newText !== null) setTextToType(newText || textToType)
+    if (newText !== null) setTextToType(newText || textToType);
   }, [duration, textToType]);
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
@@ -78,7 +74,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
     } else {
       setTextToType(text);
     }
-    resetTest(text);
+    if (text === null) {
+      resetTest(undefined);
+    } else {
+      resetTest(text);
+    }
     setLoadingNewText(false);
   }, [resetTest, toast]);
 
@@ -96,7 +96,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   useEffect(() => {
     setTimer(duration);
-    resetTest();
+    resetTest(null);
   }, [duration, resetTest]);
 
 
@@ -120,7 +120,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
 
   useEffect(() => {
-    const smoothingFactor = 0.05;
+    const smoothingFactor = 0.25;
     const animationFrameId = requestAnimationFrame(() => {
       setDisplayedWpm(prev => {
         const diff = stats.wpm - prev;
@@ -133,26 +133,24 @@ export function TypingTest({ initialText }: { initialText: string }) {
   useEffect(() => {
     if (testState === 'running' && startTime) {
       wpmIntervalRef.current = setInterval(() => {
-        const elapsedSeconds = (Date.now() - startTime) / 1000;
-        if (elapsedSeconds < 1) return;
+        const elapsedMinutes = (Date.now() - startTime) / 60000;
+        if (elapsedMinutes <= 0) return;
 
         let correctChars = 0;
-        
         userInput.split('').forEach((char, index) => {
-            if (char === textToType[index]) {
-                correctChars++;
-            }
+          if (char === textToType[index]) correctChars++;
         });
 
-        const typedChars = userInput.length;
-        const correctableMistakes = typedChars - correctChars;
-        const accuracy = totalTypedChars > 0 ? ((totalTypedChars - mistakeCount) / totalTypedChars) * 100 : 100;
-        const wpm = (correctChars / 5) / (elapsedSeconds / 60);
+        const wpm = (correctChars / 5) / elapsedMinutes;
 
+        const accuracy = userInput.length > 0 
+          ? (correctChars / userInput.length) * 100 
+          : 100;
+        
         setStats({
           wpm: Math.round(wpm),
           accuracy: Math.round(accuracy),
-          mistakes: mistakeCount,
+          mistakes: userInput.length - correctChars,
         });
 
       }, 200);
@@ -162,7 +160,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     return () => {
       if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     };
-  }, [testState, startTime, userInput, textToType, mistakeCount, totalTypedChars]);
+  }, [testState, startTime, userInput, textToType]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,14 +170,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (testState === 'waiting' && value.length > 0) {
       setTestState('running');
       setStartTime(Date.now());
-    }
-
-    if (value.length > userInput.length) { // New character typed
-        setTotalTypedChars(prev => prev + 1);
-        const newCharIndex = value.length - 1;
-        if (newCharIndex < textToType.length && value[newCharIndex] !== textToType[newCharIndex]) {
-            setMistakeCount(prev => prev + 1);
-        }
     }
 
     setUserInput(value);
@@ -289,7 +279,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             onTryAgain={() => fetchNewText(textType)}
             onOpenChange={(open) => {
               if (!open) {
-                fetchNewText(textType);
+                fetchNewText(textType, true);
               }
             }}
         />
