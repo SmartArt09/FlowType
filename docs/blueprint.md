@@ -1,4 +1,4 @@
-# **App Name**: TypeFlow
+# **App Name**: FlowType
 
 ## Core Features:
 
