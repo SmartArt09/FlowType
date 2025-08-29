@@ -33,6 +33,7 @@ export default function RootLayout({
         <meta name="google-adsense-account" content="ca-pub-6541853864426252" />
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6541853864426252"
      crossOrigin="anonymous"></script>
+        <script defer src="https://cloud.umami.is/script.js" data-website-id="379180ab-3017-46bd-9a44-ba20c35f181e"></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
