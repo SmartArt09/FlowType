@@ -16,7 +16,7 @@ interface PolicyDialogProps {
 
 const PrivacyPolicy = () => (
   <>
-    <p className="font-semibold">Effective Date: 2024-08-24</p>
+    <p className="font-semibold">Effective Date: August 28, 2025</p>
     <p>At FlowType (<a href="https://flow-type.vercel.app/" className="text-primary hover:underline">https://flow-type.vercel.app/</a>), your privacy matters to us. This Privacy Policy explains how we handle information when you use our website.</p>
     
     <h3 className="font-bold mt-4 mb-2">Information We Collect</h3>
@@ -46,7 +46,7 @@ const PrivacyPolicy = () => (
 
 const TermsOfService = () => (
   <>
-    <p className="font-semibold">Effective Date: 2024-08-24</p>
+    <p className="font-semibold">Effective Date: August 28, 2025</p>
     <p>Welcome to FlowType (<a href="https://flow-type.vercel.app/" className="text-primary hover:underline">https://flow-type.vercel.app/</a>). By using our site, you agree to the following terms.</p>
     
     <h3 className="font-bold mt-4 mb-2">1. Use of Website</h3>
