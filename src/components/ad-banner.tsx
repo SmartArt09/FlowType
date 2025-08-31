@@ -18,15 +18,15 @@ export function AdBanner() {
   }, [pathname]);
 
   return (
-    <Card className="w-full h-full min-h-[120px] flex items-center justify-center bg-card/50">
-      <div className="w-full" key={pathname}>
-        <ins className="adsbygoogle"
-          style={{ display: 'block' }}
-          data-ad-client="ca-pub-6541853864426252"
-          data-ad-slot="7454735957"
-          data-ad-format="auto"
-          data-full-width-responsive="true"></ins>
-      </div>
-    </Card>
+    <div key={pathname}>
+        <Card className="w-full h-full min-h-[120px] flex items-center justify-center bg-card/50">
+            <ins className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-6541853864426252"
+                data-ad-slot="7454735957"
+                data-ad-format="auto"
+                data-full-width-responsive="true"></ins>
+        </Card>
+    </div>
   );
 }
