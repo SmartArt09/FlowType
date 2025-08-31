@@ -20,7 +20,7 @@ export function AdBanner() {
   return (
     <div key={pathname}>
         <Card className="w-full h-full min-h-[120px] flex items-center justify-center bg-card/50">
-            <ins className="adsbygoogle"
+            <ins className="adsbygoogle w-full"
                 style={{ display: 'block' }}
                 data-ad-client="ca-pub-6541853864426252"
                 data-ad-slot="7454735957"
