@@ -11,12 +11,20 @@ export function Header() {
             <span className="text-xl font-bold tracking-tighter text-primary">FlowType</span>
           </Link>
           <nav className="flex items-center gap-4 sm:gap-6">
-             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
-                About
-             </Link>
-             <Link href="/contact" className="text-sm font-medium hover:text-primary transition-colors">
-                Contact
-             </Link>
+            <Link
+              href="https://github.com/SmartArt09/FlowType"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
+              GitHub
+            </Link>
+            <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
+              About
+            </Link>
+            <Link href="/contact" className="text-sm font-medium hover:text-primary transition-colors">
+              Contact
+            </Link>
           </nav>
         </div>
       </div>
