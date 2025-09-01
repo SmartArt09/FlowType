@@ -98,7 +98,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setIsChallengeMode(false);
       const defaultType = 'commonWords';
       setTextType(defaultType);
-      if (duration !== 60) setDuration(60); // Reset to a default duration if needed
+      setDuration(60); // Reset to a default duration
       fetchNewText(defaultType, true);
     } else {
       // Turn on challenge mode
@@ -108,7 +108,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
       resetTest(dailyChallengeText);
       setTimer(30);
     }
-  }, [isChallengeMode, resetTest, duration, fetchNewText]);
+  }, [isChallengeMode, resetTest, fetchNewText]);
 
   const endTest = useCallback(() => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -347,5 +347,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
