@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 import { getNewText } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { ResultsDialog } from './results-dialog';
-import { RefreshCw, Timer } from 'lucide-react';
+import { RefreshCw, Timer, Star } from 'lucide-react';
 import { Button } from './ui/button';
 import type { TextType } from '@/lib/texts';
+import { dailyChallenges } from '@/lib/texts';
 
 type TestState = 'waiting' | 'running' | 'finished';
 
@@ -27,6 +28,17 @@ const TEXT_TYPES: {label: string, value: TextType}[] = [
     { label: 'Code', value: 'codeSnippets' },
 ]
 
+function getDayOfYear() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - start.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
+}
+
+const dailyChallengeIndex = getDayOfYear() % dailyChallenges.length;
+const dailyChallengeText = dailyChallenges[dailyChallengeIndex];
+
 export function TypingTest({ initialText }: { initialText: string }) {
   const [textToType, setTextToType] = useState(initialText);
   const [userInput, setUserInput] = useState('');
@@ -40,6 +52,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [isChallengeMode, setIsChallengeMode] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,6 +75,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
     setLoadingNewText(true);
+    setIsChallengeMode(false);
     if(!isInitial) {
       resetTest(undefined);
     }
@@ -90,6 +104,13 @@ export function TypingTest({ initialText }: { initialText: string }) {
     fetchNewText(newType, true);
   }
 
+  const startDailyChallenge = useCallback(() => {
+    setIsChallengeMode(true);
+    setTextType('commonWords'); // It's a daily challenge, type doesn't matter as much
+    setDuration(60); // Lock duration
+    resetTest(dailyChallengeText);
+  }, [resetTest]);
+
   const endTest = useCallback(() => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
@@ -97,9 +118,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, []);
 
   useEffect(() => {
-    setTimer(duration);
-    resetTest(null);
-  }, [duration, resetTest]);
+    if (!isChallengeMode) {
+        setTimer(duration);
+        resetTest(null);
+    }
+  }, [duration, resetTest, isChallengeMode]);
 
 
   useEffect(() => {
@@ -219,18 +242,26 @@ export function TypingTest({ initialText }: { initialText: string }) {
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className='flex flex-wrap gap-4'>
+                <Button 
+                    variant={isChallengeMode ? 'default' : 'outline'} 
+                    onClick={startDailyChallenge}
+                    disabled={loadingNewText}
+                >
+                    <Star className="mr-2 h-4 w-4" />
+                    Challenge of the Day
+                </Button>
                 <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <TabsList>
+                    <TabsList disabled={isChallengeMode}>
                         {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)}>{d.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
-                    <TabsList>
+                    <TabsList disabled={isChallengeMode}>
                         {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => fetchNewText(textType)} disabled={loadingNewText}>
+            <Button variant="ghost" size="icon" onClick={() => isChallengeMode ? startDailyChallenge() : fetchNewText(textType)} disabled={loadingNewText}>
                 <RefreshCw className={cn("h-4 w-4", loadingNewText && "animate-spin")}/>
             </Button>
         </div>
@@ -291,10 +322,14 @@ export function TypingTest({ initialText }: { initialText: string }) {
         <ResultsDialog 
             open={testState === 'finished'} 
             stats={stats} 
-            onTryAgain={() => fetchNewText(textType)}
+            onTryAgain={() => isChallengeMode ? startDailyChallenge() : fetchNewText(textType)}
             onOpenChange={(open) => {
               if (!open) {
-                fetchNewText(textType, true);
+                if (isChallengeMode) {
+                  startDailyChallenge();
+                } else {
+                  fetchNewText(textType, true);
+                }
               }
             }}
         />
