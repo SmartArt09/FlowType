@@ -3,17 +3,22 @@
 
 import { Card } from "@/components/ui/card";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function AdBanner() {
   const pathname = usePathname();
+  const adPushed = useRef(false);
 
   useEffect(() => {
-    try {
-      // @ts-ignore
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (err) {
-      console.error("AdSense Error:", err);
+    // Only push the ad if it hasn't been pushed for this instance.
+    if (!adPushed.current) {
+        try {
+            // @ts-ignore
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            adPushed.current = true; // Mark ad as pushed for this instance.
+        } catch (err) {
+            console.error("AdSense Error:", err);
+        }
     }
   }, [pathname]);
 
