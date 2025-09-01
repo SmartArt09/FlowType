@@ -28,16 +28,8 @@ const TEXT_TYPES: {label: string, value: TextType}[] = [
     { label: 'Code', value: 'codeSnippets' },
 ]
 
-function getDayOfYear() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const diff = now.getTime() - start.getTime();
-    const oneDay = 1000 * 60 * 60 * 24;
-    return Math.floor(diff / oneDay);
-}
-
-const dailyChallengeIndex = getDayOfYear() % dailyChallenges.length;
-const dailyChallengeText = dailyChallenges[dailyChallengeIndex];
+const dailyChallengeText = dailyChallenges[0];
+const CHALLENGE_DURATION = 30;
 
 export function TypingTest({ initialText }: { initialText: string }) {
   const [textToType, setTextToType] = useState(initialText);
@@ -63,7 +55,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const resetTest = useCallback((newText?: string | null) => {
     setTestState('waiting');
     setUserInput('');
-    setTimer(duration);
+    setTimer(isChallengeMode ? CHALLENGE_DURATION : duration);
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setMistakeCount(0);
     setDisplayedWpm(0);
@@ -71,11 +63,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (newText !== null) setTextToType(newText || textToType);
-  }, [duration, textToType]);
+  }, [duration, textToType, isChallengeMode]);
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
-    setLoadingNewText(true);
     setIsChallengeMode(false);
+    setLoadingNewText(true);
     if(!isInitial) {
       resetTest(undefined);
     }
@@ -107,9 +99,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const startDailyChallenge = useCallback(() => {
     setIsChallengeMode(true);
     setTextType('commonWords'); 
-    setDuration(60); 
+    setDuration(CHALLENGE_DURATION); 
     resetTest(dailyChallengeText);
-    setTimer(60);
+    setTimer(CHALLENGE_DURATION);
   }, [resetTest]);
 
   const endTest = useCallback(() => {
@@ -129,7 +121,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   useEffect(() => {
     if (testState === 'running' && startTime) {
       countdownIntervalRef.current = setInterval(() => {
-        const currentDuration = isChallengeMode ? 60 : duration;
+        const currentDuration = isChallengeMode ? CHALLENGE_DURATION : duration;
         const elapsedSeconds = (Date.now() - startTime) / 1000;
         const newTimer = Math.max(0, currentDuration - Math.floor(elapsedSeconds));
         setTimer(newTimer);
@@ -329,7 +321,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 if (isChallengeMode) {
                   startDailyChallenge();
                 } else {
-                  fetchNew-text(textType, true);
+                  fetchNewText(textType, true);
                 }
               }
             }}
