@@ -29,7 +29,6 @@ const TEXT_TYPES: {label: string, value: TextType}[] = [
 ]
 
 const dailyChallengeText = dailyChallenges[0];
-const CHALLENGE_DURATIONS = [15, 30, 60];
 
 export function TypingTest({ initialText }: { initialText: string }) {
   const [textToType, setTextToType] = useState(initialText);
@@ -99,16 +98,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setIsChallengeMode(false);
       const defaultType = 'commonWords';
       setTextType(defaultType);
+      if (duration !== 60) setDuration(60); // Reset to a default duration if needed
       fetchNewText(defaultType, true);
     } else {
       // Turn on challenge mode
       setIsChallengeMode(true);
       setTextType('commonWords'); // Challenge is always 'words'
-      if (!CHALLENGE_DURATIONS.includes(duration)) {
-        setDuration(30); // Default to 30s if current duration isn't a challenge one
-      }
+      setDuration(30);
       resetTest(dailyChallengeText);
-      setTimer(CHALLENGE_DURATIONS.includes(duration) ? duration : 30);
+      setTimer(30);
     }
   }, [isChallengeMode, resetTest, duration, fetchNewText]);
 
@@ -250,12 +248,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     Challenge of the Day
                 </Button>
                 <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <TabsList disabled={loadingNewText}>
+                    <TabsList disabled={loadingNewText || isChallengeMode}>
                         {DURATIONS.map(d => (
                             <TabsTrigger 
                                 key={d.value} 
                                 value={String(d.value)}
-                                disabled={isChallengeMode && !CHALLENGE_DURATIONS.includes(d.value)}
                             >
                                 {d.label}
                             </TabsTrigger>
