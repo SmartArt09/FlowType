@@ -103,7 +103,7 @@ export const posts: Post[] = [
     slug: 'accuracy-vs-speed',
     title: 'Accuracy vs. Speed: What Really Matters in Typing Tests',
     description: 'In the race to type faster, is speed the only thing that matters? This post breaks down the critical relationship between speed and accuracy, and why prioritizing precision is the key to becoming a truly efficient typist.',
-    date: '2025-09-05',
+    date: '2025-08-29',
     content: (
       <div className="space-y-6">
         <p className="lead">
@@ -139,7 +139,7 @@ export const posts: Post[] = [
     slug: 'history-of-typing',
     title: 'The History of Typing: From Typewriters to Modern Keyboards',
     description: 'Journey through the fascinating history of the keyboard, from the first mechanical typewriters to the advanced ergonomic and mechanical keyboards of today. Discover how we got the QWERTY layout and what the future holds.',
-    date: '2025-09-12',
+    date: '2025-08-29',
     content: (
       <div className="space-y-6">
         <p className="lead">
@@ -177,7 +177,7 @@ export const posts: Post[] = [
     slug: 'best-keyboards-for-typing',
     title: 'Best Keyboards for Fast Typing in 2025',
     description: 'Your keyboard is your primary tool for typing. This guide explores the best keyboards for typists in 2025, from mechanical vs. membrane to switch types and ergonomic designs, including top recommendations.',
-    date: '2025-09-19',
+    date: '2025-08-30',
     content: (
       <div className="space-y-6">
         <p className="lead">
@@ -224,7 +224,7 @@ export const posts: Post[] = [
     slug: 'typing-for-coding-vs-writing',
     title: 'How to Practice Typing for Coding vs. Writing',
     description: 'Typing is not a one-size-fits-all skill. The demands of writing code are very different from writing prose. Learn how to tailor your practice to excel in both disciplines.',
-    date: '2025-09-26',
+    date: '2025-08-31',
     content: (
       <div className="space-y-6">
         <p className="lead">
@@ -269,7 +269,7 @@ export const posts: Post[] = [
     slug: 'top-free-online-typing-tools',
     title: 'Top Free Online Typing Tools Compared',
     description: 'Looking to improve your typing speed? We compare the best free online typing tools, including FlowType, 10FastFingers, and Monkeytype, to help you find the perfect platform for your practice.',
-    date: '2025-10-03',
+    date: '2025-09-01',
     content: (
       <div className="space-y-6">
         <p className="lead">
