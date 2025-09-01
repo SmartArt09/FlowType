@@ -35,6 +35,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const [textType, setTextType] = useState<TextType>('commonWords');
   const [timer, setTimer] = useState(duration);
   const [stats, setStats] = useState({ wpm: 0, accuracy: 100, mistakes: 0 });
+  const [mistakeCount, setMistakeCount] = useState(0);
   const [displayedWpm, setDisplayedWpm] = useState(0);
   const [loadingNewText, setLoadingNewText] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -51,6 +52,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     setUserInput('');
     setTimer(duration);
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
+    setMistakeCount(0);
     setDisplayedWpm(0);
     setStartTime(null);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
@@ -137,20 +139,26 @@ export function TypingTest({ initialText }: { initialText: string }) {
         if (elapsedMinutes <= 0) return;
 
         let correctChars = 0;
+        let incorrectChars = 0;
         userInput.split('').forEach((char, index) => {
-          if (char === textToType[index]) correctChars++;
+          if (char === textToType[index]) {
+            correctChars++;
+          } else {
+            incorrectChars++;
+          }
         });
 
         const wpm = (correctChars / 5) / elapsedMinutes;
 
-        const accuracy = userInput.length > 0 
-          ? (correctChars / userInput.length) * 100 
+        const totalTyped = userInput.length;
+        const accuracy = totalTyped > 0
+          ? ((totalTyped - incorrectChars) / totalTyped) * 100
           : 100;
         
         setStats({
           wpm: Math.round(wpm),
           accuracy: Math.round(accuracy),
-          mistakes: userInput.length - correctChars,
+          mistakes: mistakeCount,
         });
 
       }, 200);
@@ -160,7 +168,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     return () => {
       if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     };
-  }, [testState, startTime, userInput, textToType]);
+  }, [testState, startTime, userInput, textToType, mistakeCount]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +179,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
       setTestState('running');
       setStartTime(Date.now());
     }
-
+    
+    const lastChar = value[value.length - 1];
+    const lastCharIndex = value.length - 1;
+    if (value.length > userInput.length) { // Character added
+        if (lastChar !== textToType[lastCharIndex]) {
+            setMistakeCount(prev => prev + 1);
+        }
+    }
+    
     setUserInput(value);
 
     if (value.length === textToType.length) {
@@ -182,6 +198,17 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
+    }
+    
+    if (e.key === 'Backspace') {
+      if ((e.ctrlKey || e.metaKey)) {
+        const words = userInput.trimEnd().split(' ');
+        const lastWord = words.pop() || '';
+        const charsToDelete = userInput.length - (words.join(' ').length + (words.length > 0 ? 1 : 0));
+        setMistakeCount(prev => prev + charsToDelete);
+      } else {
+        setMistakeCount(prev => prev + 1);
+      }
     }
   }
 
@@ -287,3 +314,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
