@@ -139,12 +139,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
         if (elapsedMinutes <= 0) return;
 
         let correctChars = 0;
-        let incorrectChars = 0;
+        
         userInput.split('').forEach((char, index) => {
           if (char === textToType[index]) {
             correctChars++;
-          } else {
-            incorrectChars++;
           }
         });
 
@@ -152,12 +150,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
         const totalTyped = userInput.length;
         const accuracy = totalTyped > 0
-          ? ((totalTyped - incorrectChars) / totalTyped) * 100
+          ? ((totalTyped - mistakeCount) / totalTyped) * 100
           : 100;
         
         setStats({
           wpm: Math.round(wpm),
-          accuracy: Math.round(accuracy),
+          accuracy: Math.max(0, Math.round(accuracy)), // Ensure accuracy isn't negative
           mistakes: mistakeCount,
         });
 
@@ -199,17 +197,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
     }
-    
-    if (e.key === 'Backspace') {
-      if ((e.ctrlKey || e.metaKey)) {
-        const words = userInput.trimEnd().split(' ');
-        const lastWord = words.pop() || '';
-        const charsToDelete = userInput.length - (words.join(' ').length + (words.length > 0 ? 1 : 0));
-        setMistakeCount(prev => prev + charsToDelete);
-      } else {
-        setMistakeCount(prev => prev + 1);
-      }
-    }
+    // Removed backspace handling from here to prevent double counting
   }
 
   const characters = useMemo(() => {
@@ -314,5 +302,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
