@@ -18,7 +18,7 @@ type TestState = 'waiting' | 'running' | 'finished';
 const DURATIONS = [
   { label: '15s', value: 15 },
   { label: '30s', value: 30 },
-  { label: '1m', value: 60 },
+  { label: '60s', value: 60 },
   { label: '3m', value: 180 },
   { label: '5m', value: 300 },
 ];
@@ -29,7 +29,7 @@ const TEXT_TYPES: {label: string, value: TextType}[] = [
 ]
 
 const dailyChallengeText = dailyChallenges[0];
-const CHALLENGE_DURATION = 30;
+const CHALLENGE_DURATIONS = [15, 30, 60];
 
 export function TypingTest({ initialText }: { initialText: string }) {
   const [textToType, setTextToType] = useState(initialText);
@@ -55,15 +55,15 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const resetTest = useCallback((newText?: string | null) => {
     setTestState('waiting');
     setUserInput('');
-    setTimer(isChallengeMode ? CHALLENGE_DURATION : duration);
+    setTimer(duration);
     setStats({ wpm: 0, accuracy: 100, mistakes: 0 });
     setMistakeCount(0);
     setDisplayedWpm(0);
     setStartTime(null);
     if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    if (newText !== null) setTextToType(newText || textToType);
-  }, [duration, textToType, isChallengeMode]);
+    if (newText !== null) setTextToType(newText || initialText);
+  }, [duration, initialText]);
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
     setIsChallengeMode(false);
@@ -82,15 +82,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
     } else {
       setTextToType(text);
     }
-    if (text === null) {
-      resetTest(undefined);
-    } else {
-      resetTest(text);
-    }
+    resetTest(text);
     setLoadingNewText(false);
   }, [resetTest, toast]);
 
   const handleTextTypeChange = (v: string) => {
+    setIsChallengeMode(false);
     const newType = v as TextType;
     setTextType(newType);
     fetchNewText(newType, true);
@@ -99,10 +96,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
   const startDailyChallenge = useCallback(() => {
     setIsChallengeMode(true);
     setTextType('commonWords'); 
-    setDuration(CHALLENGE_DURATION); 
+    if (!CHALLENGE_DURATIONS.includes(duration)) {
+        setDuration(30);
+    }
     resetTest(dailyChallengeText);
-    setTimer(CHALLENGE_DURATION);
-  }, [resetTest]);
+    setTimer(CHALLENGE_DURATIONS.includes(duration) ? duration : 30);
+  }, [resetTest, duration]);
 
   const endTest = useCallback(() => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -111,19 +110,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, []);
 
   useEffect(() => {
-    if (!isChallengeMode) {
-        setTimer(duration);
-        resetTest(null);
-    }
-  }, [duration, resetTest, isChallengeMode]);
+    setTimer(duration);
+    resetTest(null);
+  }, [duration, resetTest]);
 
 
   useEffect(() => {
     if (testState === 'running' && startTime) {
       countdownIntervalRef.current = setInterval(() => {
-        const currentDuration = isChallengeMode ? CHALLENGE_DURATION : duration;
         const elapsedSeconds = (Date.now() - startTime) / 1000;
-        const newTimer = Math.max(0, currentDuration - Math.floor(elapsedSeconds));
+        const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
         setTimer(newTimer);
 
         if (newTimer <= 0) {
@@ -135,7 +131,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, [testState, startTime, duration, endTest, isChallengeMode]);
+  }, [testState, startTime, duration, endTest]);
 
 
   useEffect(() => {
@@ -197,10 +193,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
     
     const lastChar = value[value.length - 1];
     const lastCharIndex = value.length - 1;
+
     if (value.length > userInput.length) { // Character added
-        if (lastChar !== textToType[lastCharIndex]) {
-            setMistakeCount(prev => prev + 1);
-        }
+      if (lastChar !== textToType[lastCharIndex]) {
+        setMistakeCount(prev => prev + 1);
+      }
     }
     
     setUserInput(value);
@@ -212,7 +209,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        e.preventDefault();
+      e.preventDefault();
     }
   }
 
@@ -244,8 +241,16 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     Challenge of the Day
                 </Button>
                 <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <TabsList disabled={isChallengeMode || loadingNewText}>
-                        {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)}>{d.label}</TabsTrigger>)}
+                    <TabsList disabled={loadingNewText}>
+                        {DURATIONS.map(d => (
+                            <TabsTrigger 
+                                key={d.value} 
+                                value={String(d.value)}
+                                disabled={isChallengeMode && !CHALLENGE_DURATIONS.includes(d.value)}
+                            >
+                                {d.label}
+                            </TabsTrigger>
+                        ))}
                     </TabsList>
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
@@ -315,7 +320,13 @@ export function TypingTest({ initialText }: { initialText: string }) {
         <ResultsDialog 
             open={testState === 'finished'} 
             stats={stats} 
-            onTryAgain={() => isChallengeMode ? startDailyChallenge() : fetchNewText(textType)}
+            onTryAgain={() => {
+                if (isChallengeMode) {
+                    startDailyChallenge();
+                } else {
+                    fetchNewText(textType, true);
+                }
+            }}
             onOpenChange={(open) => {
               if (!open) {
                 if (isChallengeMode) {
