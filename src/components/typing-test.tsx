@@ -106,9 +106,10 @@ export function TypingTest({ initialText }: { initialText: string }) {
 
   const startDailyChallenge = useCallback(() => {
     setIsChallengeMode(true);
-    setTextType('commonWords'); // It's a daily challenge, type doesn't matter as much
-    setDuration(60); // Lock duration
+    setTextType('commonWords'); 
+    setDuration(60); 
     resetTest(dailyChallengeText);
+    setTimer(60);
   }, [resetTest]);
 
   const endTest = useCallback(() => {
@@ -128,8 +129,9 @@ export function TypingTest({ initialText }: { initialText: string }) {
   useEffect(() => {
     if (testState === 'running' && startTime) {
       countdownIntervalRef.current = setInterval(() => {
+        const currentDuration = isChallengeMode ? 60 : duration;
         const elapsedSeconds = (Date.now() - startTime) / 1000;
-        const newTimer = Math.max(0, duration - Math.floor(elapsedSeconds));
+        const newTimer = Math.max(0, currentDuration - Math.floor(elapsedSeconds));
         setTimer(newTimer);
 
         if (newTimer <= 0) {
@@ -141,7 +143,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
-  }, [testState, startTime, duration, endTest]);
+  }, [testState, startTime, duration, endTest, isChallengeMode]);
 
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
         
         setStats({
           wpm: Math.round(wpm),
-          accuracy: Math.max(0, Math.round(accuracy)), // Ensure accuracy isn't negative
+          accuracy: Math.max(0, Math.round(accuracy)),
           mistakes: mistakeCount,
         });
 
@@ -220,7 +222,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         e.preventDefault();
     }
-    // Removed backspace handling from here to prevent double counting
   }
 
   const characters = useMemo(() => {
@@ -251,12 +252,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     Challenge of the Day
                 </Button>
                 <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <TabsList disabled={isChallengeMode}>
+                    <TabsList disabled={isChallengeMode || loadingNewText}>
                         {DURATIONS.map(d => <TabsTrigger key={d.value} value={String(d.value)}>{d.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
-                    <TabsList disabled={isChallengeMode}>
+                    <TabsList disabled={isChallengeMode || loadingNewText}>
                         {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
@@ -328,7 +329,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 if (isChallengeMode) {
                   startDailyChallenge();
                 } else {
-                  fetchNewText(textType, true);
+                  fetchNew-text(textType, true);
                 }
               }
             }}
