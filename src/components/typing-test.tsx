@@ -86,27 +86,28 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [resetTest, toast]);
 
   const handleTextTypeChange = (v: string) => {
-    setIsChallengeMode(false);
     const newType = v as TextType;
     setTextType(newType);
+    setIsChallengeMode(false);
     fetchNewText(newType, true);
   }
 
   const handleChallengeToggle = useCallback(() => {
-    if (isChallengeMode) {
-      // Turn off challenge mode, go back to default
-      setIsChallengeMode(false);
-      const defaultType = 'commonWords';
-      setTextType(defaultType);
-      setDuration(60); // Reset to a default duration
-      fetchNewText(defaultType, true);
-    } else {
+    const nextChallengeMode = !isChallengeMode;
+    setIsChallengeMode(nextChallengeMode);
+
+    if (nextChallengeMode) {
       // Turn on challenge mode
-      setIsChallengeMode(true);
       setTextType('commonWords'); // Challenge is always 'words'
       setDuration(30);
       resetTest(dailyChallengeText);
       setTimer(30);
+    } else {
+      // Turn off challenge mode, go back to default
+      const defaultType = 'commonWords';
+      setTextType(defaultType);
+      setDuration(60); // Reset to a default duration
+      fetchNewText(defaultType, true);
     }
   }, [isChallengeMode, resetTest, fetchNewText]);
 
@@ -117,9 +118,11 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, []);
 
   useEffect(() => {
-    setTimer(duration);
-    resetTest(null);
-  }, [duration, resetTest]);
+    if (!isChallengeMode) {
+        setTimer(duration);
+        resetTest(null);
+    }
+  }, [duration, resetTest, isChallengeMode]);
 
 
   useEffect(() => {
@@ -253,6 +256,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                             <TabsTrigger 
                                 key={d.value} 
                                 value={String(d.value)}
+                                disabled={isChallengeMode}
                             >
                                 {d.label}
                             </TabsTrigger>
@@ -261,7 +265,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
                     <TabsList disabled={isChallengeMode || loadingNewText}>
-                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value} disabled={isChallengeMode}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
             </div>
@@ -347,3 +351,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
