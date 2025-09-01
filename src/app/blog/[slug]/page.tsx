@@ -1,9 +1,11 @@
+
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { posts } from '@/lib/blog.tsx';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { AdBanner } from '@/components/ad-banner';
 
 export async function generateStaticParams() {
   return posts.map((post) => ({
@@ -20,7 +22,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 sm:p-8 md:p-12">
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-3xl flex flex-col gap-8">
         <Card className="bg-card/70 backdrop-blur-sm shadow-2xl shadow-primary/5">
           <CardHeader>
             <div className="mb-6">
@@ -44,6 +46,9 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             </div>
           </CardContent>
         </Card>
+        <div className="pt-4">
+          <AdBanner />
+        </div>
       </div>
     </main>
   );

@@ -1,7 +1,9 @@
+
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { posts } from '@/lib/blog.tsx';
 import { format } from 'date-fns';
+import { AdBanner } from '@/components/ad-banner';
 
 export default function BlogPage() {
   return (
@@ -35,6 +37,11 @@ export default function BlogPage() {
             </Link>
           ))}
         </div>
+
+        <div className="pt-12">
+            <AdBanner />
+        </div>
+
       </div>
     </main>
   );
