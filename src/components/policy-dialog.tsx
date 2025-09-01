@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 
 interface PolicyDialogProps {
@@ -85,6 +86,9 @@ export function PolicyDialog({ title, children }: PolicyDialogProps) {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {isPrivacyPolicy ? "Privacy Policy for FlowType" : "Terms and Conditions for FlowType"}
+          </DialogDescription>
         </DialogHeader>
         <div className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto pr-4">
           {isPrivacyPolicy ? <PrivacyPolicy /> : <TermsOfService />}
