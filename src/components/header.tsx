@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Keyboard } from 'lucide-react';
+import { Keyboard, ExternalLink } from 'lucide-react';
 
 export function Header() {
   return (
@@ -15,9 +15,10 @@ export function Header() {
               href="https://github.com/SmartArt09/FlowType"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors"
             >
               GitHub
+              <ExternalLink className="h-4 w-4" />
             </Link>
             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
               About
