@@ -2,6 +2,7 @@ import { TypingTest } from '@/components/typing-test';
 import { TypingTip } from '@/components/typing-tip';
 import { AdBanner } from '@/components/ad-banner';
 import { typingTexts } from '@/lib/texts';
+import { TypingInfo } from '@/components/typing-info';
 
 export default async function Home() {
   const initialText = typingTexts.commonWords[0];
@@ -15,6 +16,7 @@ export default async function Home() {
         </header>
 
         <TypingTest initialText={initialText} />
+        <TypingInfo />
 
         <div className="flex flex-col gap-8 pt-8">
           <TypingTip />
