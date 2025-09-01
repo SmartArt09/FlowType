@@ -19,6 +19,9 @@ export function Header() {
             >
               GitHub
             </Link>
+            <Link href="/blog" className="text-sm font-medium hover:text-primary transition-colors">
+              Blog
+            </Link>
             <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
               About
             </Link>
