@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { posts } from '@/lib/blog.tsx';
 import { format } from 'date-fns';
 import { AdBanner } from '@/components/ad-banner';
+import { Separator } from '@/components/ui/separator';
 
 export default function BlogPage() {
   return (
@@ -38,7 +39,28 @@ export default function BlogPage() {
           ))}
         </div>
 
-        <div className="pt-12">
+        <div className="text-center py-12">
+          <Separator className="my-8" />
+          <h3 className="text-xl font-semibold mb-2">Want to contribute?</h3>
+          <p className="text-muted-foreground">
+            You can add a new Blog, Tutorial, or Tip by opening an issue on our GitHub.
+            <br />
+            Please use the title{' '}
+            <code className="bg-muted text-muted-foreground font-mono p-1 rounded-md text-sm">Blog Addition Request</code>{' '}
+            and add your content in the description.
+          </p>
+          <Link
+            href="https://github.com/SmartArt09/FlowType/issues/new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline mt-4 inline-block"
+          >
+            Create a New Issue
+          </Link>
+        </div>
+
+
+        <div className="pt-4">
             <AdBanner />
         </div>
 
