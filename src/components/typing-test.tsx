@@ -65,7 +65,6 @@ export function TypingTest({ initialText }: { initialText: string }) {
   }, [duration, initialText]);
 
   const fetchNewText = useCallback(async (type: TextType, isInitial = false) => {
-    setIsChallengeMode(false);
     setLoadingNewText(true);
     if(!isInitial) {
       resetTest(undefined);
@@ -251,12 +250,12 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     Challenge of the Day
                 </Button>
                 <Tabs value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
-                    <TabsList disabled={loadingNewText || isChallengeMode}>
+                    <TabsList>
                         {DURATIONS.map(d => (
                             <TabsTrigger 
                                 key={d.value} 
                                 value={String(d.value)}
-                                disabled={isChallengeMode}
+                                disabled={isChallengeMode || loadingNewText}
                             >
                                 {d.label}
                             </TabsTrigger>
@@ -264,8 +263,8 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     </TabsList>
                 </Tabs>
                 <Tabs value={textType} onValueChange={handleTextTypeChange}>
-                    <TabsList disabled={isChallengeMode || loadingNewText}>
-                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value} disabled={isChallengeMode}>{t.label}</TabsTrigger>)}
+                    <TabsList>
+                        {TEXT_TYPES.map(t => <TabsTrigger key={t.value} value={t.value} disabled={isChallengeMode || loadingNewText}>{t.label}</TabsTrigger>)}
                     </TabsList>
                 </Tabs>
             </div>
@@ -351,5 +350,3 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
-
-    
