@@ -93,15 +93,24 @@ export function TypingTest({ initialText }: { initialText: string }) {
     fetchNewText(newType, true);
   }
 
-  const startDailyChallenge = useCallback(() => {
-    setIsChallengeMode(true);
-    setTextType('commonWords'); 
-    if (!CHALLENGE_DURATIONS.includes(duration)) {
-        setDuration(30);
+  const handleChallengeToggle = useCallback(() => {
+    if (isChallengeMode) {
+      // Turn off challenge mode, go back to default
+      setIsChallengeMode(false);
+      const defaultType = 'commonWords';
+      setTextType(defaultType);
+      fetchNewText(defaultType, true);
+    } else {
+      // Turn on challenge mode
+      setIsChallengeMode(true);
+      setTextType('commonWords'); // Challenge is always 'words'
+      if (!CHALLENGE_DURATIONS.includes(duration)) {
+        setDuration(30); // Default to 30s if current duration isn't a challenge one
+      }
+      resetTest(dailyChallengeText);
+      setTimer(CHALLENGE_DURATIONS.includes(duration) ? duration : 30);
     }
-    resetTest(dailyChallengeText);
-    setTimer(CHALLENGE_DURATIONS.includes(duration) ? duration : 30);
-  }, [resetTest, duration]);
+  }, [isChallengeMode, resetTest, duration, fetchNewText]);
 
   const endTest = useCallback(() => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -234,7 +243,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             <div className='flex flex-wrap gap-4'>
                 <Button 
                     variant={isChallengeMode ? 'default' : 'outline'} 
-                    onClick={startDailyChallenge}
+                    onClick={handleChallengeToggle}
                     disabled={loadingNewText}
                 >
                     <Star className="mr-2 h-4 w-4" />
@@ -259,7 +268,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
                     </TabsList>
                 </Tabs>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => isChallengeMode ? startDailyChallenge() : fetchNewText(textType)} disabled={loadingNewText}>
+            <Button variant="ghost" size="icon" onClick={() => isChallengeMode ? handleChallengeToggle() : fetchNewText(textType)} disabled={loadingNewText}>
                 <RefreshCw className={cn("h-4 w-4", loadingNewText && "animate-spin")}/>
             </Button>
         </div>
@@ -322,7 +331,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             stats={stats} 
             onTryAgain={() => {
                 if (isChallengeMode) {
-                    startDailyChallenge();
+                    handleChallengeToggle(); // This will reset to a new challenge
                 } else {
                     fetchNewText(textType, true);
                 }
@@ -330,7 +339,7 @@ export function TypingTest({ initialText }: { initialText: string }) {
             onOpenChange={(open) => {
               if (!open) {
                 if (isChallengeMode) {
-                  startDailyChallenge();
+                    handleChallengeToggle();
                 } else {
                   fetchNewText(textType, true);
                 }
@@ -341,3 +350,5 @@ export function TypingTest({ initialText }: { initialText: string }) {
     </Card>
   );
 }
+
+    
