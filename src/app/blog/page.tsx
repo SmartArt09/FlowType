@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { posts } from '@/lib/blog';
+import { posts } from '@/lib/blog.tsx';
 import { format } from 'date-fns';
 
 export default function BlogPage() {
